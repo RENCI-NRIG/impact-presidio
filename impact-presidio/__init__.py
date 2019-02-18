@@ -14,6 +14,7 @@ from jinja2 import TemplateNotFound
 
 __version__ = '0.0.1'
 
+
 class SafeAutoIndex(AutoIndex):
     """A Flask AutoIndex application that checks SAFE
     for authorization decisions."""
