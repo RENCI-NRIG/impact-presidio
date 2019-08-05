@@ -3,31 +3,18 @@ Webapp file server that uses SAFE to guard its contents
 
 Quick notes for startup:
 - Check out repo
-- Do "docker build ."
-- Tag the docker build; I'll use the tag "presidio_test" in the example below.
-- Grab CA certificates from:
-https://cilogon.org/cilogon-ca-certificates.tar.gz
-- Un-tar certificate bundle, and concatenate pem files into a single cert bundle; something similar to:
+- Do "docker-compose build"
+- The directory "config" has all of the current CILogon CA certificates, in "ca-certs.pem"
+- These were obtained from: https://cilogon.org/cilogon-ca-certificates.tar.gz
+- This certificate bundle was un-tarred and concatenated thus:
 cd cilogon-ca/certificates/
 cat cilogon-*.pem > ../../ca-certs.pem
-- Create a server certificate and key file for the server
-- Place the server certificate, key, and CA certs file in a directory named "config"
-- Create a "projects" directory and populate it.
-- Finally, run your docker container similar to below; you will need to bind mount your config and projects directories:
+- Obtain a server certificate and key file for the server; we are using certbot.
+- Make a directory "ssl"; copy the certificate into it as "SSL.crt" and the key into it as "SSL.key"
+- Create a "projects" directory and populate it. It can be labeled using ".safelabels" files or xattrs.
+- Replace the string "PRESIDIO_HOST" in "nginx/default.conf.template" with your desired hostname, and copy it to "nginx/default.conf"
+- Finally, start the Docker containers as below:
 
-docker run -dit --rm -p 8000:8000/tcp -v /srv/config:/opt/presidio-deploy/config -v /srv/projects:/opt/presidio-deploy/projects presidio_test
-
-Presidio can also be build in a virtualenv (rather than in Docker).
-The process is similar to the above:
-
-- Check out the repo
-- Create a virtualenv within the checkout directory; for example:
-virtualenv --python=python3 presidio
-- Activate the virtualenv:
-source presidio/bin/activate
-- After activating the virtualenv, install presidio from the repo directory by running pip:
-pip install -e .
-- Obtain server certificate, key, and CA bundle as described above
-- Create and populate (or symlink to) a directory named "projects" in the repo directory
-- Finally, run presidio; for an example of how you might do so, check out testing_scripts/test_run_presidio.sh
+docker-compose up -d presidio
+docker-compose up -d nginx
 
