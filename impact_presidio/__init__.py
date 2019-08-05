@@ -12,6 +12,7 @@ from flask_autoindex import AutoIndex
 from .SafeAutoIndex import SafeAutoIndex
 from .LabelMechs import configure_label_mech
 from .CredentialUtils import process_credentials, initialize_CA_store
+from .CredentialUtils import _BAD_IDEA_set_use_unverified_jwt
 
 _ConfFile = '/etc/impact_presidio/config.yaml'
 
@@ -63,6 +64,11 @@ else:
 
 label_mech = presidio_config.get('label_mech')
 configure_label_mech(label_mech, presidio_config, project_path)
+
+# Please, please don't use the below, except for debugging.
+unverified_jwt = presidio_config.get('BAD_IDEA_use_unverified_jwt')
+if unverified_jwt:
+    _BAD_IDEA_set_use_unverified_jwt()
 
 autoIndex = AutoIndex(app, browse_root=project_path, add_url_rules=False)
 

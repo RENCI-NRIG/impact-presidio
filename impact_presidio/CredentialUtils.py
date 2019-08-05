@@ -8,7 +8,17 @@ import urllib.parse
 from flask import request, abort, make_response
 from ns_jwt import NSJWT
 
-CAStore = crypto.X509Store()
+_CAStore = crypto.X509Store()
+_use_unverified_jwt = False
+
+
+def _BAD_IDEA_set_use_unverified_jwt():
+    global _use_unverified_jwt
+    print('BAD IDEA: Use of unverified JWTs requested!')
+    print('BAD IDEA: This option is for debugging ONLY!')
+    print('BAD IDEA: Please, please don\' use this in production!')
+    print('BAD IDEA: You have been warned...')
+    _use_unverified_jwt = True
 
 
 def initialize_CA_store(CAFile=None):
@@ -18,7 +28,7 @@ def initialize_CA_store(CAFile=None):
             for root_cert in root_certs:
                 loaded_cert = crypto.load_certificate(crypto.FILETYPE_PEM,
                                                       root_cert.as_bytes())
-                CAStore.add_cert(loaded_cert)
+                _CAStore.add_cert(loaded_cert)
 
 
 def generate_safe_principal_id(pubkey):
@@ -42,7 +52,7 @@ def process_credentials():
                            "browser."))
 
     cert_x509 = crypto.load_certificate(crypto.FILETYPE_PEM, request.cert)
-    x509_context = crypto.X509StoreContext(CAStore, cert_x509)
+    x509_context = crypto.X509StoreContext(_CAStore, cert_x509)
     try:
         verify_result = x509_context.verify_certificate()
     except crypto.X509StoreContextError:
@@ -116,38 +126,46 @@ def process_ns_jwt(jwt):
     except:
         return (None, "Failed to extract unverified claims from JWT.")
 
-    ns_fqdn = unverified_claims.get('iss')
-    ns_pubkey = None
-    if ns_fqdn:
-        ns_cert = ssl.get_server_certificate((ns_fqdn, 443))
-        ns_x509 = crypto.load_certificate(crypto.FILETYPE_PEM, ns_cert)
-        ns_pubkey = ns_x509.get_pubkey()
-    else:
-        return (None, "Unable to find issuer in JWT claims.")
-
-    if ns_pubkey:
-        try:
-            ns_pubkey_pem = crypto.dump_publickey(crypto.FILETYPE_PEM,
-                                                  ns_pubkey)
-            ns_jwt.decode(publicKey=ns_pubkey_pem)
-        except:
-            return (None, "Notary Service JWT failed verified decode.")
-    else:
-        return (None, "Could not obtain public key from JWT issuer.")
-
     verified_claims = None
-    try:
-        verified_claims = ns_jwt.getClaims()
-    except:
-        return (None, "Failed to extract verified claims from JWT.")
+    if not _use_unverified_jwt:
+        ns_fqdn = unverified_claims.get('iss')
+        ns_pubkey = None
+        if ns_fqdn:
+            try:
+                ns_cert = ssl.get_server_certificate((ns_fqdn, 443))
+                ns_x509 = crypto.load_certificate(crypto.FILETYPE_PEM, ns_cert)
+                ns_pubkey = ns_x509.get_pubkey()
+            except:
+                return (None, ('Unable to get server certificate ' +
+                               'from Notary Service.'))
+        else:
+            return (None, "Unable to find issuer in JWT claims.")
 
-    computed_ns_token = generate_safe_principal_id(ns_pubkey)
-    ns_token = verified_claims.get('ns-token')
-    if ns_token:
-        if ns_token != computed_ns_token.decode('utf-8'):
-            return (None, ("JWT ns-token does not match token " +
-                           "computed from public key."))
+        if ns_pubkey:
+            try:
+                ns_pubkey_pem = crypto.dump_publickey(crypto.FILETYPE_PEM,
+                                                      ns_pubkey)
+                ns_jwt.decode(publicKey=ns_pubkey_pem)
+            except:
+                return (None, "Notary Service JWT failed verified decode.")
+        else:
+            return (None, "Could not obtain public key from JWT issuer.")
+
+        try:
+            verified_claims = ns_jwt.getClaims()
+        except:
+            return (None, "Failed to extract verified claims from JWT.")
+
+        computed_ns_token = generate_safe_principal_id(ns_pubkey)
+        ns_token = verified_claims.get('ns-token')
+        if ns_token:
+            if ns_token != computed_ns_token.decode('utf-8'):
+                return (None, ("JWT ns-token does not match token " +
+                               "computed from public key."))
+            else:
+                return (None, "Unable to find ns-token in JWT claims.")
     else:
-        return (None, "Unable to find ns-token in JWT claims.")
+        print('BAD IDEA: Using unverified JWT claims, against advice...')
+        verified_claims = unverified_claims
 
     return (verified_claims, None)

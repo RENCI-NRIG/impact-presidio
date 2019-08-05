@@ -23,6 +23,15 @@ class SafeAutoIndex(AutoIndex):
         self._register_shared_autoindex(app=self.app)
 
     def safe_check_access(self):
+        pconf = self.app.config['PRESIDIO_CONFIG']
+        bypass_safe = pconf.get('BAD_IDEA_bypass_safe_servers')
+        if bypass_safe:
+            print('BAD IDEA: Bypassing SAFE servers requested!')
+            print('BAD IDEA: This option is for debugging ONLY!')
+            print('BAD IDEA: Please, please don\' use this in production!')
+            print('BAD IDEA: You have been warned...')
+            return True
+
         # Stub, until we have all parameters ready.
         return True
 

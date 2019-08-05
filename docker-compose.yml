@@ -40,7 +40,7 @@ services:
       - backend
     environment:
       - RIAK_IP=${RIAK_IP:-riak}
-      - SLANG_SCRIPT=${SLANG_SCRIPT:-impact/mvp-ns.slang}
+      - SLANG_SCRIPT=${SLANG_SCRIPT:-impact/mvp-presidio.slang}
       - AKKA_LOG_LEVEL=${AKKA_LOG_LEVEL:-info}
     volumes:
       - ${SAFE_IMPORTS:-./safe/imports}:/imports
