@@ -162,8 +162,8 @@ def process_ns_jwt(jwt):
             if ns_token != computed_ns_token.decode('utf-8'):
                 return (None, ("JWT ns-token does not match token " +
                                "computed from public key."))
-            else:
-                return (None, "Unable to find ns-token in JWT claims.")
+        else:
+            return (None, "Unable to find ns-token in JWT claims.")
     else:
         print('BAD IDEA: Using unverified JWT claims, against advice...')
         verified_claims = unverified_claims
