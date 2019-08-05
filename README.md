@@ -16,5 +16,6 @@ cat cilogon-*.pem > ../../ca-certs.pem
 - Finally, start the Docker containers as below:
 
 docker-compose up -d presidio
+
 docker-compose up -d nginx
 
