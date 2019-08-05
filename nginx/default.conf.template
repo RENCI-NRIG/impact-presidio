@@ -1,0 +1,48 @@
+upstream presidio {
+  # fail_timeout=0 means we always retry an upstream even if it failed
+  # to return a good HTTP response
+
+  server presidio:8000 fail_timeout=0;
+}
+
+server {
+  listen 80;
+  return 301 https://PRESIDIO_HOST$request_uri;
+}
+
+server {
+  listen 443 ssl default_server;
+  # the domain name it will serve for
+  server_name PRESIDIO_HOST; # substitute your machine's IP address or FQDN
+
+  # If they come here using HTTP, bounce them to the correct scheme
+  error_page 497 https://$server_name$request_uri;
+  # Or if you're on the default port 443, then this should work too
+  # error_page 497 https://;
+
+  ssl_certificate /etc/ssl/SSL.crt;
+  ssl_certificate_key /etc/ssl/SSL.key;
+
+  # NB: Expired client certificates will still get rejected by nginx,
+  # rather than being forwarded to the application for rejection.
+  ssl_verify_client optional_no_ca;
+
+  charset     utf-8;
+
+  # max upload size
+  client_max_body_size 4G;   # adjust to taste
+
+  # keep alive...
+  keepalive_timeout 5;
+
+  # Send everything to presidio...
+  location / {
+      proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+      proxy_set_header X-Forwarded-Proto https;
+      proxy_set_header X-SSL-Cert $ssl_client_escaped_cert;
+      proxy_set_header Host $http_host;
+      proxy_redirect off;
+
+      proxy_pass http://presidio;
+  }
+}

@@ -1,0 +1,8 @@
+project_path: /srv/projects/
+ca_file: /etc/impact_presidio/ca-certs.pem
+safe_authz_server_list: [ [ localhost, Null ] ]
+label_mech: safelabels
+#label_mech: xattr
+safelabels_filename: .safelabels
+xattr_label_base: user.us.cyberimpact.SAFE.SCID
+

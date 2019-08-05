@@ -3,24 +3,27 @@
 #
 
 # Pull base image.
-FROM python:3
+FROM python:3-alpine
 
 # Define the deployment directory
+ENV CONFIG /etc/impact_presidio
 ENV DEPLOYMENT /opt/presidio-deploy
-ENV RUN_USER nobody
-ENV RUN_GROUP nogroup
+ENV PROJECTS /srv/projects
+ENV LOGDIR /var/log/impact_presidio
+
+# Add dependencies
+RUN apk add --update --no-cache build-base make libffi-dev openssl-dev
 
 # Create the directory structure.
 # "config" and "projects" are mountpoints intended for Docker bind mounts
-RUN mkdir -p ${DEPLOYMENT} && \
-        mkdir ${DEPLOYMENT}/config && \
-        mkdir ${DEPLOYMENT}/projects && \
-        mkdir ${DEPLOYMENT}/log && \
-        chown -R ${RUN_USER}:${RUN_GROUP} ${DEPLOYMENT}/log
+RUN mkdir -p ${CONFIG} && \
+        mkdir -p ${DEPLOYMENT} && \
+        mkdir -p ${PROJECTS} && \
+        mkdir -p ${LOGDIR}
 
 # Populate the directory structure.
 COPY setup.py ${DEPLOYMENT}
-COPY impact-presidio ${DEPLOYMENT}/impact-presidio
+COPY impact_presidio ${DEPLOYMENT}/impact_presidio
 
 # Set up presidio and install all dependencies.
 RUN cd ${DEPLOYMENT} && \
@@ -29,7 +32,12 @@ RUN cd ${DEPLOYMENT} && \
 # Define ports
 EXPOSE 8000
 
+# Define number of workers
+ENV NUM_WORKERS 1
+
+# Define allowed IPs, with a default.
+ENV ALLOWED_IPS localhost
+
 # Change user, and run.
-USER ${RUN_USER}
 WORKDIR ${DEPLOYMENT}
-ENTRYPOINT gunicorn --bind=0.0.0.0:8000 --error-logfile=log/error_log --access-logfile=log/access_log --capture-output --certfile=config/cert.pem --keyfile=config/key.pem --ca-certs=config/ca-certs.pem --do-handshake-on-connect --cert-reqs 2 impact-presidio:app
+ENTRYPOINT gunicorn --bind=0.0.0.0:8000 --workers="${NUM_WORKERS}" --forwarded-allow-ips="${ALLOWED_IPS}" --error-logfile=${LOGDIR}/error_log --access-logfile=${LOGDIR}/access_log --capture-output impact_presidio:app
