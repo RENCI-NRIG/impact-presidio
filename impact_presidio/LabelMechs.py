@@ -34,7 +34,7 @@ def SafeLabelsFileCheck(path, dataset_SCID):
         except yaml.YAMLError as ye:
             # OK. This is bad news.
             #
-            # The admin *clearly* had an intented set of controls, but
+            # The admin *clearly* had an intended set of controls, but
             # apparently failed to write the YAML correctly.
             #
             # Spit out a warning and exception (to aid in debugging),
