@@ -28,7 +28,7 @@ class SafeAutoIndex(AutoIndex):
         if bypass_safe:
             print('BAD IDEA: Bypassing SAFE servers requested!')
             print('BAD IDEA: This option is for debugging ONLY!')
-            print('BAD IDEA: Please, please don\' use this in production!')
+            print('BAD IDEA: Please, please don\'t use this in production!')
             print('BAD IDEA: You have been warned...')
             return True
 

@@ -16,7 +16,7 @@ def _BAD_IDEA_set_use_unverified_jwt():
     global _use_unverified_jwt
     print('BAD IDEA: Use of unverified JWTs requested!')
     print('BAD IDEA: This option is for debugging ONLY!')
-    print('BAD IDEA: Please, please don\' use this in production!')
+    print('BAD IDEA: Please, please don\'t use this in production!')
     print('BAD IDEA: You have been warned...')
     _use_unverified_jwt = True
 
