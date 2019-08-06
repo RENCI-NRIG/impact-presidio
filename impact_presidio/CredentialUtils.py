@@ -72,8 +72,8 @@ def process_credentials():
 
     jwt_claims = None
     jwt_error = None
-    if request.method == 'POST':
-        jwt_field = request.form.get('ImPACT-JWT')
+    if (len(request.args) > 0):
+        jwt_field = request.args.get('ImPACT-JWT')
         if jwt_field:
             (jwt_claims, jwt_error) = process_ns_jwt(jwt_field)
         else:
@@ -90,11 +90,11 @@ def process_credentials():
 
         res = make_response("")
         res.set_cookie("ImPACT-JWT", value=jwt_field, expires=jwt_expiration)
-        res.headers['Location'] = request.url
+        res.headers['Location'] = request.base_url
         return res, 302
 
-    # Get the JWT that should have been provided in a cookie, and
-    # validate it.
+    # If we've gotten here, the JWT is now a cookie.
+    # We'll grab that and process it.
     jwt_cookie = request.cookies.get('ImPACT-JWT')
     if jwt_cookie:
         (jwt_claims, jwt_error) = process_ns_jwt(jwt_cookie)
