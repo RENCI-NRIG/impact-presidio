@@ -34,6 +34,9 @@ class SafeAutoIndex(AutoIndex):
 
         presidio_principal = self.app.config['PRESIDIO_PRINCIPAL']
         safe_server_list = self.app.config['SAFE_SERVER_LIST']
+        # project_ID is arriving as bytes...sigh.
+        # Talk to Stealey
+        project_ID = project_ID.decode('utf-8')
         for server in safe_server_list:
             url = ('http://' + server + '/access')
             payload = ('{ "principal": "' +
