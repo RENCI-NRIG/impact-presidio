@@ -174,7 +174,9 @@ class SafeAutoIndex(AutoIndex):
             except TemplateNotFound:
                 template = '{0}/autoindex.html'.format(__autoindex__)
                 return render_template(template, **context)
-        elif (os.path.isfile(abspath) and self.is_it_safe(abspath)):
+        elif (os.path.isfile(abspath) and
+              self.is_it_safe(abspath, dataset_SCID, user_DN,
+                              ns_token, project_ID)):
             if mimetype:
                 return send_file(abspath, mimetype=mimetype)
             else:
