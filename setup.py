@@ -17,6 +17,7 @@ setup(
         'pyOpenSSL >= 18.0.0',
         'pem >= 19.1.0',
         'PyYAML >= 3.13',
+        'requests >= 2.22.0',
         'xattr >= 0.9.6',
         'ns_jwt >= 0.1.2'
     ]
