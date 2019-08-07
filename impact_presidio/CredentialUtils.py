@@ -7,6 +7,7 @@ import urllib.parse
 
 from flask import request, abort, make_response
 from ns_jwt import NSJWT
+from datetime import datetime
 
 _CAStore = crypto.X509Store()
 _use_unverified_jwt = False
@@ -31,11 +32,18 @@ def initialize_CA_store(CAFile=None):
                 _CAStore.add_cert(loaded_cert)
 
 
-def generate_safe_principal_id(pubkey):
+def generate_safe_principal_id(key):
     sha256Hasher = hashlib.sha256()
-    sha256Hasher.update(crypto.dump_publickey(crypto.FILETYPE_ASN1,
-                                              pubkey))
+    sha256Hasher.update(crypto.dump_publickey(crypto.FILETYPE_ASN1, key))
     return base64.urlsafe_b64encode(sha256Hasher.digest())
+
+
+def generate_presidio_principal(keyFile):
+    private_key = None
+    with open(keyFile, 'rb') as kf:
+        key_bytes = kf.read()
+        private_key = crypto.load_privatekey(crypto.FILETYPE_PEM, key_bytes)
+    return generate_safe_principal_id(private_key)
 
 
 def process_credentials():
@@ -70,34 +78,40 @@ def process_credentials():
                            "Presidio. Please contact your administrator for " +
                            "assistance."))
 
+    x509_DN_str = ""
+    for k, v in cert_x509.get_subject().get_components():
+        x509_DN_str = (x509_DN_str +
+                       "/" +
+                       k.decode() +
+                       "=" +
+                       v.decode())
+
     jwt_claims = None
     jwt_error = None
     if (len(request.args) > 0):
         jwt_field = request.args.get('ImPACT-JWT')
         if jwt_field:
+            jwt_expiration = None
             (jwt_claims, jwt_error) = process_ns_jwt(jwt_field)
-        else:
-            return abort(401, "No JWT was provided in POST.")
-
-        jwt_expiration = None
-        if jwt_claims:
-            try:
+            if jwt_claims:
                 jwt_expiration = jwt_claims.get('exp')
-            except:
-                return abort(401, "Unable to find expiration in JWT claims.")
-        else:
-            return abort(401, jwt_error)
+            else:
+                return abort(401, jwt_error)
 
-        res = make_response("")
-        res.set_cookie("ImPACT-JWT", value=jwt_field, expires=jwt_expiration)
-        res.headers['Location'] = request.base_url
-        return res, 302
+            if jwt_expiration is None:
+                return abort(401, "Unable to find expiration in JWT claims.")
+
+            res = make_response("")
+            res.set_cookie("ImPACT-JWT", value=jwt_field,
+                           expires=jwt_expiration)
+            res.headers['Location'] = request.base_url
+            return res, 302
 
     # If we've gotten here, the JWT is now a cookie.
     # We'll grab that and process it.
     jwt_cookie = request.cookies.get('ImPACT-JWT')
     if jwt_cookie:
-        (jwt_claims, jwt_error) = process_ns_jwt(jwt_cookie)
+        (jwt_claims, jwt_error) = process_ns_jwt(jwt_cookie, x509_DN_str)
     else:
         return abort(401, ("Cookie containing requisite information from " +
                            "Notary Service missing or expired. Please " +
@@ -110,7 +124,7 @@ def process_credentials():
         return abort(401, jwt_error)
 
 
-def process_ns_jwt(jwt):
+def process_ns_jwt(jwt, DN_from_cert):
     ns_jwt = NSJWT()
     ns_jwt.setToken(jwt)
 
@@ -164,6 +178,22 @@ def process_ns_jwt(jwt):
                                "computed from public key."))
         else:
             return (None, "Unable to find ns-token in JWT claims.")
+
+        expiry = verified_claims.get('exp')
+        if expiry:
+            dte = datetime.fromtimestamp(expiry)
+            if datetime.now() > dte:
+                return (None, "JWT has expired.")
+        else:
+            return (None, "Unable to find expiry in JWT claims.")
+
+        userDN = verified_claims.get('sub')
+        if userDN:
+            if userDN != DN_from_cert:
+                return (None, ("JWT subject does not match " +
+                               "value from client certificate."))
+        else:
+            return (None, "Unable to find subject in JWT claims.")
     else:
         print('BAD IDEA: Using unverified JWT claims, against advice...')
         verified_claims = unverified_claims

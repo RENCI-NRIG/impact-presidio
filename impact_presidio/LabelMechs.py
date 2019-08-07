@@ -101,6 +101,10 @@ def SafeLabelsChecker_v1(path, dataset_SCID, safeLabels):
                 if (l == dataset_SCID):
                     return True
             return False
+        else:
+            print('Incorrectly specified value in \'overrides\' entry.')
+            print('Failing safe...')
+            return False
 
     default_labels = safeLabels.get('default')
     if default_labels is None:

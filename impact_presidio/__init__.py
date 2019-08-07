@@ -12,6 +12,7 @@ from flask_autoindex import AutoIndex
 from .SafeAutoIndex import SafeAutoIndex
 from .LabelMechs import configure_label_mech
 from .CredentialUtils import process_credentials, initialize_CA_store
+from .CredentialUtils import generate_presidio_principal
 from .CredentialUtils import _BAD_IDEA_set_use_unverified_jwt
 
 _ConfFile = '/etc/impact_presidio/config.yaml'
@@ -47,6 +48,41 @@ except:
     print('\"project_path\" entry not specified in configuration!')
     print('Cannot proceed; exiting...')
     sys.exit(1)
+
+key_file = presidio_config.get('key_file')
+presidio_principal = None
+if key_file:
+    try:
+        presidio_principal = generate_presidio_principal(key_file)
+    except:
+        print('Error loading key file!')
+        print('Please ensure that the key_file config entry points to the')
+        print('correct file, that the file has the correct format, and that')
+        print('it contains the data that you expect.')
+        print('Cannot proceed; exiting...')
+        sys.exit(1)
+else:
+    print('\"key_file\" entry not specified in configuration!')
+    print('Cannot proceed; exiting...')
+    sys.exit(1)
+app.config['PRESIDIO_PRINCIPAL'] = presidio_principal
+
+safe_servers = presidio_config.get('safe_servers')
+safe_server_list = []
+if safe_servers:
+    if type(safe_servers) is str:
+        safe_server_list.append(safe_servers)
+    elif type(safe_servers) is list:
+        safe_server_list += safe_servers
+    else:
+        print('\"safe_servers\" entry incorrectly specified in configuration!')
+        print('Cannot proceed; exiting...')
+        sys.exit(1)
+else:
+    print('\"safe_servers\" entry not specified in configuration!')
+    print('Cannot proceed; exiting...')
+    sys.exit(1)
+app.config['SAFE_SERVER_LIST'] = safe_server_list
 
 ca_file = presidio_config.get('ca_file')
 if ca_file:

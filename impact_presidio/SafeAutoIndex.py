@@ -1,13 +1,12 @@
 import os.path
 import re
-import OpenSSL.crypto as crypto
+import requests
 
 from flask import request, abort, render_template, send_file
 from flask_autoindex import AutoIndex, RootDirectory, Directory, __autoindex__
 from jinja2 import TemplateNotFound
 
 from .LabelMechs import check_labels
-from .CredentialUtils import generate_safe_principal_id
 
 
 class SafeAutoIndex(AutoIndex):
@@ -22,7 +21,8 @@ class SafeAutoIndex(AutoIndex):
         self.app = app
         self._register_shared_autoindex(app=self.app)
 
-    def safe_check_access(self):
+    def safe_check_access(self, dataset_SCID, user_DN,
+                          ns_token, project_ID):
         pconf = self.app.config['PRESIDIO_CONFIG']
         bypass_safe = pconf.get('BAD_IDEA_bypass_safe_servers')
         if bypass_safe:
@@ -32,17 +32,57 @@ class SafeAutoIndex(AutoIndex):
             print('BAD IDEA: You have been warned...')
             return True
 
-        # Stub, until we have all parameters ready.
-        return True
+        presidio_principal = self.app.config['PRESIDIO_PRINCIPAL']
+        safe_server_list = self.app.config['SAFE_SERVER_LIST']
+        for server in safe_server_list:
+            url = ('http://' + server + '/access')
+            payload = ('{ "principal": "' +
+                       presidio_principal +
+                       '", "methodParams": [ "' +
+                       dataset_SCID +
+                       '", "' +
+                       user_DN +
+                       '", "' +
+                       ns_token +
+                       '", "' +
+                       project_ID +
+                       '" ] }')
+            headers = {'Content-Type': 'application/json',
+                       'Accept-Charset': 'UTF-8'}
+            print('Trying to query SAFE with following parameters: %s' %
+                  payload)
+            resp = requests.post(url, data=payload, headers=headers, timeout=4)
+            status_code = resp.status_code
+            safe_result = resp.json
+            resp.close()
 
-    def is_it_safe(self, path, dataset_SCID):
-        if check_labels(path, dataset_SCID):
-            return self.safe_check_access()
+            print('Status code from SAFE is: %s' % status_code)
+            if status_code == 200:
+                if (safe_result.get('result') == 'succeed'):
+                    print('SAFE permitted access for %s to dataset %s' %
+                          (user_DN, dataset_SCID))
+                    return True
+            else:
+                print('SAFE server %s returned status code %s' %
+                      (server, status_code))
+                print('Trying next SAFE server in list (if any)...')
+
+        # None of the configured servers returned a successful result;
+        # Log the failure, return False, and move on.
         return False
 
-    def safe_entry_generator(self, entries, dataset_SCID):
+    def is_it_safe(self, path, dataset_SCID,
+                   user_DN, ns_token, project_ID):
+        if check_labels(path, dataset_SCID):
+            return self.safe_check_access(dataset_SCID, user_DN,
+                                          ns_token, project_ID)
+        return False
+
+    def safe_entry_generator(self, entries, dataset_SCID,
+                             user_DN, ns_token, project_ID):
         for e in entries:
-            if self.is_it_safe(e.abspath, dataset_SCID):
+            if (self.is_it_safe(e.abspath, dataset_SCID,
+                                user_DN, ns_token, project_ID)):
                 yield e
 
     def render_autoindex(self, path, browse_root=None, template=None,
@@ -78,33 +118,19 @@ class SafeAutoIndex(AutoIndex):
             return abort(401, "Notary Service JWT not found.")
 
         print('Path is: %s' % abspath)
-        req_x509 = crypto.load_certificate(crypto.FILETYPE_PEM, request.cert)
-        # print('Client cert serial number is: %s' %
-        #       req_x509.get_serial_number())
-
-        # dnStr = ""
-        # for k, v in req_x509.get_subject().get_components():
-        #     dnStr = (dnStr +
-        #              "/" +
-        #              k.decode() +
-        #              "=" +
-        #              v.decode())
-        # print('Client cert distinguished name is: %s' % dnStr)
-
-        req_x509_pub_key = req_x509.get_pubkey()
-        safe_principal = generate_safe_principal_id(req_x509_pub_key)
-        # print('Client cert public key (PEM) is:\n%s' %
-        #       crypto.dump_publickey(crypto.FILETYPE_PEM,
-        #                             req_x509_pub_key))
-        print('Client cert public key as SAFE principal ID: %s' %
-              safe_principal)
-        print('Client address:port is: %s:%s' %
-              (request.environ['REMOTE_ADDR'],
-               request.environ['REMOTE_PORT']))
 
         dataset_SCID = request.verified_jwt_claims.get('data-set')
         if dataset_SCID is None:
             return abort(401, "Unable to find data-set in JWT claims.")
+        user_DN = request.verified_jwt_claims.get('sub')
+        if user_DN is None:
+            return abort(401, "Unable to find sub in JWT claims.")
+        ns_token = request.verified_jwt_claims.get('ns-token')
+        if ns_token is None:
+            return abort(401, "Unable to find ns-token in JWT claims.")
+        project_ID = request.verified_jwt_claims.get('project-id')
+        if project_ID is None:
+            return abort(401, "Unable to find project-id in JWT claims.")
 
         if os.path.isdir(abspath):
             sort_by = request.args.get('sort_by', sort_by)
@@ -124,7 +150,11 @@ class SafeAutoIndex(AutoIndex):
             # The "safe_entries" generator will call out to SAFE,
             # which will, in turn, make the decision of whether to display
             # a given entry.
-            safe_entries = self.safe_entry_generator(entries, dataset_SCID)
+            safe_entries = self.safe_entry_generator(entries,
+                                                     dataset_SCID,
+                                                     user_DN,
+                                                     ns_token,
+                                                     project_ID)
 
             if callable(endpoint):
                 endpoint = endpoint.__name__
