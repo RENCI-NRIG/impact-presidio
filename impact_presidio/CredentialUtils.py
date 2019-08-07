@@ -92,7 +92,7 @@ def process_credentials():
         jwt_field = request.args.get('ImPACT-JWT')
         if jwt_field:
             jwt_expiration = None
-            (jwt_claims, jwt_error) = process_ns_jwt(jwt_field)
+            (jwt_claims, jwt_error) = process_ns_jwt(jwt_field, x509_DN_str)
             if jwt_claims:
                 jwt_expiration = jwt_claims.get('exp')
             else:
