@@ -1,6 +1,6 @@
 project_path: /srv/projects/
 ca_file: /etc/impact_presidio/ca-certs.pem
-presidio_keyfile: /etc/impact_presidio/key.pem
+key_file: /etc/impact_presidio/key.pem
 safe_servers: [ safe:7777 ]
 label_mech: safelabels
 safelabels_filename: .safelabels
