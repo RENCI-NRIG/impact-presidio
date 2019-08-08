@@ -35,6 +35,9 @@ EXPOSE 8000
 # Define number of workers
 ENV NUM_WORKERS 1
 
+# Define number of workers
+ENV NUM_THREADS 10
+
 # Define worker timeout
 ENV WORKER_TIMEOUT 305
 
@@ -43,4 +46,4 @@ ENV ALLOWED_IPS localhost
 
 # Change user, and run.
 WORKDIR ${DEPLOYMENT}
-ENTRYPOINT gunicorn --bind=0.0.0.0:8000 --workers="${NUM_WORKERS}" --worker-class=gthread --timeout="${WORKER_TIMEOUT}" --forwarded-allow-ips="${ALLOWED_IPS}" --error-logfile=${LOGDIR}/error_log --access-logfile=${LOGDIR}/access_log --capture-output impact_presidio:app
+ENTRYPOINT gunicorn --bind=0.0.0.0:8000 --workers="${NUM_WORKERS}" --worker-class=gthread --threads="${NUM_THREADS}" --timeout="${WORKER_TIMEOUT}" --forwarded-allow-ips="${ALLOWED_IPS}" --error-logfile=${LOGDIR}/error_log --access-logfile=${LOGDIR}/access_log --capture-output impact_presidio:app
