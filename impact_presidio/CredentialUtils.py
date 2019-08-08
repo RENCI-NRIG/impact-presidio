@@ -23,6 +23,10 @@ def _BAD_IDEA_set_use_unverified_jwt():
 
 
 def initialize_CA_store(CAFile=None):
+    # Using this, with *full* knowledge that there's a potential
+    # security issue.
+    #
+    # See: https://github.com/pyca/pyopenssl/pull/473
     if CAFile:
         root_certs = pem.parse_file(CAFile)
         if root_certs:
