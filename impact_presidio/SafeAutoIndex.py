@@ -1,8 +1,10 @@
+import json
 import os.path
+import random
 import re
 import requests
-import json
 
+from datetime import datetime
 from flask import request, abort, render_template, send_file
 from flask_autoindex import AutoIndex, RootDirectory, Directory, __autoindex__
 from jinja2 import TemplateNotFound
@@ -15,6 +17,8 @@ class SafeAutoIndex(AutoIndex):
     for authorization decisions."""
 
     template_prefix = ''
+    safe_result_cache = dict()
+    safe_result_cache_seconds = 2  # Seconds before results are stale
 
     def __init__(self, app, browse_root=None, **silk_options):
         super(SafeAutoIndex, self).__init__(app, browse_root,
@@ -43,28 +47,58 @@ class SafeAutoIndex(AutoIndex):
                    'Accept-Charset': 'UTF-8'}
 
         safe_server_list = self.app.config['SAFE_SERVER_LIST']
+        random.shuffle(safe_server_list)
         for server in safe_server_list:
+            safe_result = None
             url = ('http://' + server + '/access')
+
+            # Check the cache first...
+            safe_result = self.query_safe_result_cache(url, methodParams)
+            if safe_result is not None:
+                print('Using cached SAFE query result')
+                print('Access decision for dataset %s by %s was: %s' %
+                      (user_DN, dataset_SCID, safe_result))
+                return safe_result
+
+            # Nothing in the cache? Time to ask SAFE.
             print('Trying to query SAFE with following parameters: %s' %
                   payload)
-            resp = requests.post(url, data=payload, headers=headers, timeout=4)
-            status_code = resp.status_code
-            safe_result = resp.json()
-            resp.close()
+
+            status_code = None
+            try:
+                resp = requests.post(url, data=payload,
+                                     headers=headers, timeout=4)
+                status_code = resp.status_code
+                safe_result = resp.json()
+                resp.close()
+            except Exception as e:
+                print('Failure while trying to query SAFE server: %s' %
+                      server)
+                print('Backtrace follows:')
+                print(e)
+                print('Trying next SAFE server in list (if any)...')
+                continue
 
             print('Status code from SAFE is: %s' % status_code)
             if status_code == 200:
                 if (safe_result.get('result') == 'succeed'):
                     print('SAFE permitted access for %s to dataset %s' %
                           (user_DN, dataset_SCID))
+                    self.update_safe_result_cache(url, methodParams, True)
                     return True
+                else:
+                    # We got a non-affirmative response.
+                    print('SAFE did not permit access for %s to dataset %s' %
+                          (user_DN, dataset_SCID))
+                    self.update_safe_result_cache(url, methodParams, False)
+                    return False
             else:
                 print('SAFE server %s returned status code %s' %
                       (server, status_code))
                 print('Trying next SAFE server in list (if any)...')
+                continue
 
-        # None of the configured servers returned a successful result;
-        # Log the failure, return False, and move on.
+        print('None of the configured SAFE servers replied; denying access.')
         return False
 
     def is_it_safe(self, path, dataset_SCID,
@@ -179,3 +213,28 @@ class SafeAutoIndex(AutoIndex):
                 return send_file(abspath)
         else:
             return abort(404)
+
+    def query_safe_result_cache(self, url, methodParams):
+        key = (url + str(methodParams))
+        val = self.safe_result_cache.get(key)
+        if val:
+            result, expire_time = val
+            if (datetime.now() < expire_time):
+                return result
+        return None
+
+    def update_safe_result_cache(self, url, methodParams, result):
+        if ((len(self.safe_result_cache) == 0) and
+                (self.safe_result_cache_seconds != 0)):
+            # Initialize cache config
+            expire_seconds = self.app.config.get('SAFE_RESULT_CACHE_SECONDS')
+            if expire_seconds:
+                self.safe_result_cache_seconds = expire_seconds
+            else:
+                print('Using default value.')
+            print('SAFE result cache expiry time is %s seconds.' %
+                  self.safe_result_cache_seconds)
+
+        key = (url + str(methodParams))
+        expire_time = (datetime.now() + self.safe_result_cache_seconds)
+        self.safe_result_cache[key] = (result, expire_time)

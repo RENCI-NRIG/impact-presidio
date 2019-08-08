@@ -2,6 +2,7 @@ project_path: /srv/projects/
 ca_file: /etc/impact_presidio/ca-certs.pem
 key_file: /etc/impact_presidio/key.pem
 safe_servers: [ safe:7777 ]
+safe_result_cache_seconds: 2
 label_mech: safelabels
 safelabels_filename: .safelabels
 xattr_label_base: user.us.cyberimpact.SAFE.SCID

@@ -84,6 +84,16 @@ else:
     sys.exit(1)
 app.config['SAFE_SERVER_LIST'] = safe_server_list
 
+safe_result_cache_seconds = presidio_config.get('safe_result_cache_seconds')
+if safe_result_cache_seconds:
+    if (((type(safe_result_cache_seconds) is int) or
+         (type(safe_result_cache_seconds) is float)) and
+            (safe_result_cache_seconds >= 0)):
+        app.config['SAFE_RESULT_CACHE_SECONDS'] = safe_result_cache_seconds
+    else:
+        print('\"safe_result_cache_seconds\" incorrectly specified')
+        print('in configuration!')
+
 ca_file = presidio_config.get('ca_file')
 if ca_file:
     try:
