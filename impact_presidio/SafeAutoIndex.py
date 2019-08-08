@@ -34,16 +34,17 @@ class SafeAutoIndex(AutoIndex):
             return True
 
         presidio_principal = self.app.config['PRESIDIO_PRINCIPAL']
-        safe_server_list = self.app.config['SAFE_SERVER_LIST']
         presidio_principal = presidio_principal.decode('utf-8')
+        methodParams = [dataset_SCID, user_DN, ns_token, project_ID]
+        payload_dict = {'principal': presidio_principal,
+                        'methodParams': methodParams}
+        payload = json.dumps(payload_dict)
+        headers = {'Content-Type': 'application/json',
+                   'Accept-Charset': 'UTF-8'}
+
+        safe_server_list = self.app.config['SAFE_SERVER_LIST']
         for server in safe_server_list:
             url = ('http://' + server + '/access')
-            headers = {'Content-Type': 'application/json',
-                       'Accept-Charset': 'UTF-8'}
-            methodParams = [dataset_SCID, user_DN, ns_token, project_ID]
-            payload_dict = {'principal': presidio_principal,
-                            'methodParams': methodParams}
-            payload = json.dumps(payload_dict)
             print('Trying to query SAFE with following parameters: %s' %
                   payload)
             resp = requests.post(url, data=payload, headers=headers, timeout=4)
