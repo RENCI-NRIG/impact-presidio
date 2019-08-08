@@ -85,7 +85,7 @@ else:
 app.config['SAFE_SERVER_LIST'] = safe_server_list
 
 safe_result_cache_seconds = presidio_config.get('safe_result_cache_seconds')
-if safe_result_cache_seconds:
+if safe_result_cache_seconds is not None:
     if (((type(safe_result_cache_seconds) is int) or
          (type(safe_result_cache_seconds) is float)) and
             (safe_result_cache_seconds >= 0)):
