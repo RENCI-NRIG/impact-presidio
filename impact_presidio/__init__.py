@@ -91,8 +91,8 @@ if safe_result_cache_seconds is not None:
             (safe_result_cache_seconds >= 0)):
         app.config['SAFE_RESULT_CACHE_SECONDS'] = safe_result_cache_seconds
     else:
-        print('\"safe_result_cache_seconds\" incorrectly specified')
-        print('in configuration!')
+        print(('\"safe_result_cache_seconds\" incorrectly specified ' +
+               'in configuration!'))
 
 ca_file = presidio_config.get('ca_file')
 if ca_file:
