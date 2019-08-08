@@ -64,13 +64,10 @@ class SafeAutoIndex(AutoIndex):
             print('Trying to query SAFE with following parameters: %s' %
                   payload)
 
-            status_code = None
+            resp = None
             try:
                 resp = requests.post(url, data=payload,
                                      headers=headers, timeout=4)
-                status_code = resp.status_code
-                safe_result = resp.json()
-                resp.close()
             except Exception as e:
                 print('Error occurred while trying to query SAFE server: %s' %
                       server)
@@ -78,6 +75,22 @@ class SafeAutoIndex(AutoIndex):
                 print(e)
                 print('Trying next SAFE server in list (if any)...')
                 continue
+
+            status_code = None
+            if resp:
+                status_code = resp.status_code
+                try:
+                    safe_result = resp.json()
+                except Exception as e:
+                    print(('Error occurred while parsing response ' +
+                           'from SAFE server: %s') %
+                          server)
+                    print('Error message:')
+                    print(e)
+                    print('Trying next SAFE server in list (if any)...')
+                    continue
+                finally:
+                    resp.close()
 
             print('Status code from SAFE is: %s' % status_code)
             if status_code == 200:
