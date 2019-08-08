@@ -4,7 +4,7 @@ import random
 import re
 import requests
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from flask import request, abort, render_template, send_file
 from flask_autoindex import AutoIndex, RootDirectory, Directory, __autoindex__
 from jinja2 import TemplateNotFound
@@ -237,5 +237,5 @@ class SafeAutoIndex(AutoIndex):
 
         key = (url + str(methodParams))
         expire_time = (datetime.now() +
-                       datetime.timedelta(0, self.safe_result_cache_seconds))
+                       timedelta(0, self.safe_result_cache_seconds))
         self.safe_result_cache[key] = (result, expire_time)
