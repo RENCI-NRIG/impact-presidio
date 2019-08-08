@@ -29,13 +29,13 @@ try:
         presidio_config = yaml.safe_load(cf)
 except EnvironmentError as enve:
     print('Encountered error while attempting to read configuration file!')
-    print('Backtrace follows:')
+    print('Error message:')
     print(enve)
     print('Cannot proceed; exiting...')
     sys.exit(1)
 except yaml.YAMLError as ye:
     print('Encountered error loading configuration file!')
-    print('Backtrace follows:')
+    print('Error message:')
     print(ye)
     print('Cannot proceed; exiting...')
     sys.exit(1)

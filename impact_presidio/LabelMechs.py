@@ -42,7 +42,7 @@ def SafeLabelsFileCheck(path, dataset_SCID):
             # to check the parent's policy, which the admin may well have
             # been trying to supersede with the mis-written file.
             print('Encountered error while parsing SafeLabels file!')
-            print('Backtrace follows:')
+            print('Error message:')
             print(ye)
             print('Failing safe, and disallowing access to: %s' %
                   path)

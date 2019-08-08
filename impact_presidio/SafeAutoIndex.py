@@ -72,9 +72,9 @@ class SafeAutoIndex(AutoIndex):
                 safe_result = resp.json()
                 resp.close()
             except Exception as e:
-                print('Failure while trying to query SAFE server: %s' %
+                print('Error occurred while trying to query SAFE server: %s' %
                       server)
-                print('Backtrace follows:')
+                print('Error message:')
                 print(e)
                 print('Trying next SAFE server in list (if any)...')
                 continue
