@@ -1,6 +1,7 @@
 import os.path
 import re
 import requests
+import json
 
 from flask import request, abort, render_template, send_file
 from flask_autoindex import AutoIndex, RootDirectory, Directory, __autoindex__
@@ -34,29 +35,20 @@ class SafeAutoIndex(AutoIndex):
 
         presidio_principal = self.app.config['PRESIDIO_PRINCIPAL']
         safe_server_list = self.app.config['SAFE_SERVER_LIST']
-        # project_ID is arriving as bytes...sigh.
-        # Talk to Stealey
-        project_ID = project_ID.decode('utf-8')
+        presidio_principal = presidio_principal.decode('utf-8')
         for server in safe_server_list:
             url = ('http://' + server + '/access')
-            payload = ('{ "principal": "' +
-                       presidio_principal +
-                       '", "methodParams": [ "' +
-                       dataset_SCID +
-                       '", "' +
-                       user_DN +
-                       '", "' +
-                       ns_token +
-                       '", "' +
-                       project_ID +
-                       '" ] }')
             headers = {'Content-Type': 'application/json',
                        'Accept-Charset': 'UTF-8'}
+            methodParams = [dataset_SCID, user_DN, ns_token, project_ID]
+            payload_dict = {'principal': presidio_principal,
+                            'methodParams': methodParams}
+            payload = json.dumps(payload_dict)
             print('Trying to query SAFE with following parameters: %s' %
                   payload)
             resp = requests.post(url, data=payload, headers=headers, timeout=4)
             status_code = resp.status_code
-            safe_result = resp.json
+            safe_result = resp.json()
             resp.close()
 
             print('Status code from SAFE is: %s' % status_code)
