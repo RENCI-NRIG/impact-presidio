@@ -67,11 +67,11 @@ def SafeLabelsFileCheck(path, dataset_SCID):
             print('version specification...')
         label_check = SafeLabelsChecker_v1(path, dataset_SCID, safeLabels)
         if label_check:
-            print('Granting access to %s' % path)
+            print('Matching SCID found for %s' % path)
             return True
         else:
             break
-    print('Refusing access to %s' % path)
+    print('No matching SCIDs found for %s' % path)
     return False
 
 
@@ -87,13 +87,14 @@ def SafeLabelsChecker_v1(path, dataset_SCID, safeLabels):
         return False
     else:
         keys = per_file_overrides.keys()
-        filename = os.path.basename(path)
         labels = None
         for key in keys:
             rx = re.compile(key)
-            if rx.search(filename):
+            if rx.search(path):
                 labels = per_file_overrides.get(key)
                 break
+        if labels is None:
+            return False
         if type(labels) is str:
             return (labels == dataset_SCID)
         elif type(labels) is list:
@@ -140,10 +141,10 @@ def ExtendedAttributeLabelCheck(path, dataset_SCID):
         for attr in attr_key_list:
             print('Checking attr: %s for path: %s' % (attr, cur_path))
             if (path_attrs[attr]).decode('utf-8') == dataset_SCID:
-                print('Granting access to %s' % path)
+                print('Matching SCID found for %s' % path)
                 return True
         cur_path = cur_path.parent
-    print('Refusing access to %s' % path)
+    print('No matching SCIDs found for %s' % path)
     return False
 
 
