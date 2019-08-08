@@ -236,5 +236,6 @@ class SafeAutoIndex(AutoIndex):
                   self.safe_result_cache_seconds)
 
         key = (url + str(methodParams))
-        expire_time = (datetime.now() + self.safe_result_cache_seconds)
+        expire_time = (datetime.now() +
+                       datetime.timedelta(0, self.safe_result_cache_seconds))
         self.safe_result_cache[key] = (result, expire_time)
