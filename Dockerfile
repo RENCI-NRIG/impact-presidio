@@ -45,7 +45,7 @@ ENV MAX_REQUESTS_PER_WORKER 20
 ENV MAX_REQUESTS_JITTER 10
 
 # Define worker timeout
-ENV WORKER_TIMEOUT 305
+ENV WORKER_TIMEOUT 40
 
 # Define allowed IPs, with a default.
 ENV ALLOWED_IPS localhost
