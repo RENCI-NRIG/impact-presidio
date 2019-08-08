@@ -17,6 +17,7 @@ services:
     environment:
       - NUM_WORKERS=${NUM_WORKERS:-1}
       - NUM_THREADS=${NUM_WORKERS:-10}
+      - MAX_REQUESTS_PER_WORKER=${MAX_REQUESTS_PER_WORKER:-20}
       - WORKER_TIMEOUT=${WORKER_TIMEOUT:-305}
     volumes:
       - ./config:/etc/impact_presidio/
