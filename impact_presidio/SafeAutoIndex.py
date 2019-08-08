@@ -228,7 +228,7 @@ class SafeAutoIndex(AutoIndex):
                 (self.safe_result_cache_seconds != 0)):
             # Initialize cache config
             expire_seconds = self.app.config.get('SAFE_RESULT_CACHE_SECONDS')
-            if expire_seconds:
+            if expire_seconds is not None:
                 self.safe_result_cache_seconds = expire_seconds
             else:
                 print('Using default value.')
