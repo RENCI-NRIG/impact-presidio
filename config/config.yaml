@@ -6,4 +6,8 @@ safe_result_cache_seconds: 2
 label_mech: safelabels
 safelabels_filename: .safelabels
 xattr_label_base: user.us.cyberimpact.SAFE.SCID
+log_file: /var/log/impact_presidio/app.log
+log_level: INFO
+log_file_retain: 5
+log_file_size: 5000000
 

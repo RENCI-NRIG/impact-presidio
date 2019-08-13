@@ -148,17 +148,19 @@ def ExtendedAttributeLabelCheck(path, dataset_SCID):
     return False
 
 
-def configure_label_mech(label_mech, presidio_config, project_path):
+def configure_label_mech(presidio_config, project_path):
     global _project_path
     _project_path = Path(project_path)
 
     global _label_mech_fn
     _label_mech_fn = SafeLabelsFileCheck
-    if label_mech:
-        label_mech = label_mech.lower()
-        if label_mech == 'xattr':
+
+    conf_label_mech = presidio_config.get('label_mech')
+    if conf_label_mech:
+        conf_label_mech = conf_label_mech.lower()
+        if conf_label_mech == 'xattr':
             _label_mech_fn = ExtendedAttributeLabelCheck
-        elif label_mech != 'safelabels':
+        elif conf_label_mech != 'safelabels':
             print('Unknown value specified for \"label_mech\"')
             print('in configuration file.')
     else:

@@ -1,21 +1,24 @@
 __version__ = '0.0.1'
 
-import os.path
 import sys
 import flask_autoindex
-import yaml
 
 from werkzeug.middleware.proxy_fix import ProxyFix
 from flask import Flask, render_template
 from flask_autoindex import AutoIndex
 
-from .SafeAutoIndex import SafeAutoIndex
+from .Config import load_presidio_config
+from .Config import get_presidio_principal
+from .Config import get_project_path
+from .Config import get_safe_server_list
+from .Config import configure_safe_result_cache_seconds
+from .Config import configure_ca_store
+from .Config import configure_logging
+from .Config import configure_bad_ideas
 from .LabelMechs import configure_label_mech
-from .CredentialUtils import process_credentials, initialize_CA_store
-from .CredentialUtils import generate_presidio_principal
-from .CredentialUtils import _BAD_IDEA_set_use_unverified_jwt
+from .CredentialUtils import process_credentials
+from .SafeAutoIndex import SafeAutoIndex
 
-_ConfFile = '/etc/impact_presidio/config.yaml'
 
 # Perform required monkey-patching
 flask_autoindex.AutoIndexApplication = SafeAutoIndex
@@ -23,98 +26,22 @@ flask_autoindex.AutoIndexApplication = SafeAutoIndex
 app = Flask(__name__)
 app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1)
 
-presidio_config = None
-try:
-    with open(_ConfFile, 'r') as cf:
-        presidio_config = yaml.safe_load(cf)
-except EnvironmentError as enve:
-    print('Encountered error while attempting to read configuration file!')
-    print('Error message:')
-    print(enve)
-    print('Cannot proceed; exiting...')
-    sys.exit(1)
-except yaml.YAMLError as ye:
-    print('Encountered error loading configuration file!')
-    print('Error message:')
-    print(ye)
-    print('Cannot proceed; exiting...')
-    sys.exit(1)
+presidio_config = load_presidio_config()
+presidio_principal = get_presidio_principal(presidio_config)
+safe_server_list = get_safe_server_list(presidio_config)
+project_path = get_project_path(presidio_config)
 
 app.config['PRESIDIO_CONFIG'] = presidio_config
-
-try:
-    project_path = os.path.abspath(presidio_config.get('project_path'))
-except:
-    print('\"project_path\" entry not specified in configuration!')
-    print('Cannot proceed; exiting...')
-    sys.exit(1)
-
-key_file = presidio_config.get('key_file')
-presidio_principal = None
-if key_file:
-    try:
-        presidio_principal = generate_presidio_principal(key_file)
-    except:
-        print('Error loading key file!')
-        print('Please ensure that the key_file config entry points to the')
-        print('correct file, that the file has the correct format, and that')
-        print('it contains the data that you expect.')
-        print('Cannot proceed; exiting...')
-        sys.exit(1)
-else:
-    print('\"key_file\" entry not specified in configuration!')
-    print('Cannot proceed; exiting...')
-    sys.exit(1)
 app.config['PRESIDIO_PRINCIPAL'] = presidio_principal
-
-safe_servers = presidio_config.get('safe_servers')
-safe_server_list = []
-if safe_servers:
-    if type(safe_servers) is str:
-        safe_server_list.append(safe_servers)
-    elif type(safe_servers) is list:
-        safe_server_list += safe_servers
-    else:
-        print('\"safe_servers\" entry incorrectly specified in configuration!')
-        print('Cannot proceed; exiting...')
-        sys.exit(1)
-else:
-    print('\"safe_servers\" entry not specified in configuration!')
-    print('Cannot proceed; exiting...')
-    sys.exit(1)
 app.config['SAFE_SERVER_LIST'] = safe_server_list
 
-safe_result_cache_seconds = presidio_config.get('safe_result_cache_seconds')
-if safe_result_cache_seconds is not None:
-    if (((type(safe_result_cache_seconds) is int) or
-         (type(safe_result_cache_seconds) is float)) and
-            (safe_result_cache_seconds >= 0)):
-        app.config['SAFE_RESULT_CACHE_SECONDS'] = safe_result_cache_seconds
-    else:
-        print(('\"safe_result_cache_seconds\" incorrectly specified ' +
-               'in configuration!'))
+configure_ca_store(presidio_config)
+configure_logging(presidio_config)
+configure_label_mech(presidio_config, project_path)
+configure_safe_result_cache_seconds(app)
 
-ca_file = presidio_config.get('ca_file')
-if ca_file:
-    try:
-        initialize_CA_store(ca_file)
-    except EnvironmentError as enve:
-        print('Error loading CA roots!')
-        print('Please ensure that the ca_file config entry points to the')
-        print('correct file, that the file has the correct format, and that')
-        print('it contains the data that you expect.')
-        print('Continuing to run - but presidio may behave unpredictably...')
-else:
-    print('ca_file entry not specified in config file!')
-    print('Continuing to run - but presidio may behave unpredictably...')
-
-label_mech = presidio_config.get('label_mech')
-configure_label_mech(label_mech, presidio_config, project_path)
-
-# Please, please don't use the below, except for debugging.
-unverified_jwt = presidio_config.get('BAD_IDEA_use_unverified_jwt')
-if unverified_jwt:
-    _BAD_IDEA_set_use_unverified_jwt()
+# Sigh. Do we *have* to...?
+configure_bad_ideas(presidio_config)
 
 autoIndex = AutoIndex(app, browse_root=project_path, add_url_rules=False)
 
