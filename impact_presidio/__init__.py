@@ -27,6 +27,7 @@ app = Flask(__name__)
 app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1)
 
 presidio_config = load_presidio_config()
+configure_logging(presidio_config)
 presidio_principal = get_presidio_principal(presidio_config)
 safe_server_list = get_safe_server_list(presidio_config)
 project_path = get_project_path(presidio_config)
@@ -36,7 +37,6 @@ app.config['PRESIDIO_PRINCIPAL'] = presidio_principal
 app.config['SAFE_SERVER_LIST'] = safe_server_list
 
 configure_ca_store(presidio_config)
-configure_logging(presidio_config)
 configure_label_mech(presidio_config, project_path)
 configure_safe_result_cache_seconds(app)
 
