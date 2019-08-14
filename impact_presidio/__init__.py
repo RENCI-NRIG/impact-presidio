@@ -7,17 +7,11 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 from flask import Flask, render_template
 from flask_autoindex import AutoIndex
 
-from .Config import load_presidio_config
-from .Config import get_presidio_principal
-from .Config import get_project_path
-from .Config import get_safe_server_list
-from .Config import configure_safe_result_cache_seconds
-from .Config import configure_ca_store
-from .Config import configure_logging
-from .Config import configure_bad_ideas
-from .LabelMechs import configure_label_mech
-from .CredentialUtils import process_credentials
-from .SafeAutoIndex import SafeAutoIndex
+from impact_presidio import Config
+from impact_presidio.Logging import configure_logging
+from impact_presidio.LabelMechs import configure_label_mech
+from impact_presidio.CredentialUtils import process_credentials
+from impact_presidio.SafeAutoIndex import SafeAutoIndex
 
 
 # Perform required monkey-patching
@@ -26,22 +20,23 @@ flask_autoindex.AutoIndexApplication = SafeAutoIndex
 app = Flask(__name__)
 app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1)
 
-presidio_config = load_presidio_config()
+presidio_config = Config.load_presidio_config()
 configure_logging(presidio_config)
-presidio_principal = get_presidio_principal(presidio_config)
-safe_server_list = get_safe_server_list(presidio_config)
-project_path = get_project_path(presidio_config)
+
+presidio_principal = Config.get_presidio_principal(presidio_config)
+safe_server_list = Config.get_safe_server_list(presidio_config)
+project_path = Config.get_project_path(presidio_config)
 
 app.config['PRESIDIO_CONFIG'] = presidio_config
 app.config['PRESIDIO_PRINCIPAL'] = presidio_principal
 app.config['SAFE_SERVER_LIST'] = safe_server_list
 
-configure_ca_store(presidio_config)
+Config.configure_ca_store(presidio_config)
+Config.configure_safe_result_cache_seconds(app)
 configure_label_mech(presidio_config, project_path)
-configure_safe_result_cache_seconds(app)
 
 # Sigh. Do we *have* to...?
-configure_bad_ideas(presidio_config)
+Config.configure_bad_ideas(presidio_config)
 
 autoIndex = AutoIndex(app, browse_root=project_path, add_url_rules=False)
 

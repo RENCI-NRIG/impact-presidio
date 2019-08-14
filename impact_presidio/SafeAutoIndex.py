@@ -9,8 +9,8 @@ from flask import request, abort, render_template, send_file
 from flask_autoindex import AutoIndex, RootDirectory, Directory, __autoindex__
 from jinja2 import TemplateNotFound
 
-from .Config import LOG
-from .LabelMechs import check_labels
+from impact_presidio.Logging import LOG
+from impact_presidio.LabelMechs import check_labels
 
 
 class SafeAutoIndex(AutoIndex):

@@ -5,7 +5,7 @@ import yaml
 
 from pathlib import Path
 
-from .Config import LOG
+from impact_presidio.Logging import LOG
 
 _label_mech_fn = None
 _project_path = None

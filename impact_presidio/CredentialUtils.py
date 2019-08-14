@@ -9,7 +9,7 @@ from flask import request, abort, make_response
 from ns_jwt import NSJWT
 from datetime import datetime
 
-from .Config import LOG
+from impact_presidio.Logging import LOG
 
 _CAStore = crypto.X509Store()
 _use_unverified_jwt = False
