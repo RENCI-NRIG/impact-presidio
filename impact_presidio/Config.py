@@ -10,6 +10,7 @@ from .CredentialUtils import _BAD_IDEA_set_use_unverified_jwt
 
 
 LOGGER = 'impact_presidio_logger'
+LOG = None
 
 _ConfFile = '/etc/impact_presidio/config.yaml'
 
@@ -41,6 +42,7 @@ def load_presidio_config():
 
 
 def configure_logging(presidio_config):
+    global LOG
     global _LogFile
     global _LogLevel
     global _LogFileRetain
@@ -103,7 +105,7 @@ def configure_logging(presidio_config):
         print('%s' % conf_log_size)
         print('Proceeding using the default')
 
-    log = logging.getLogger(LOGGER)
+    LOG = logging.getLogger(LOGGER)
     log_format = '%(asctime)s - %(levelname)s - %(message)s'
     handler = logging.handlers.RotatingFileHandler(
         _LogFile,
@@ -112,8 +114,8 @@ def configure_logging(presidio_config):
     handler.setLevel(_LogLevel)
     formatter = logging.Formatter(log_format)
     handler.setFormatter(formatter)
-    log.addHandler(handler)
-    log.info('Logging Started')
+    LOG.addHandler(handler)
+    LOG.info('Logging Started')
 
 
 def get_project_path(presidio_config):
@@ -121,8 +123,8 @@ def get_project_path(presidio_config):
     try:
         project_path = os.path.abspath(presidio_config.get('project_path'))
     except:
-        print('\"project_path\" entry not specified in configuration!')
-        print('Cannot proceed; exiting...')
+        LOG.error('\"project_path\" entry not specified in configuration!')
+        LOG.error('Cannot proceed; exiting...')
         sys.exit(1)
 
     return project_path
@@ -136,15 +138,15 @@ def get_presidio_principal(presidio_config):
         try:
             presidio_principal = generate_presidio_principal(key_file)
         except:
-            print('Error loading key file!')
-            print('Please ensure that the key_file config entry points to the')
-            print('correct file, that the file has the correct format,')
-            print('and that it contains the data that you expect.')
-            print('Cannot proceed; exiting...')
+            LOG.error('Error loading key file!')
+            LOG.error('Please ensure that the key_file config entry points')
+            LOG.error('to the correct file, that the file has the correct')
+            LOG.error('format, and that it contains the data that you expect.')
+            LOG.error('Cannot proceed; exiting...')
             sys.exit(1)
     else:
-        print('\"key_file\" entry not specified in configuration!')
-        print('Cannot proceed; exiting...')
+        LOG.error('\"key_file\" entry not specified in configuration!')
+        LOG.error('Cannot proceed; exiting...')
         sys.exit(1)
 
     return presidio_principal
@@ -160,13 +162,13 @@ def get_safe_server_list(presidio_config):
         elif type(safe_servers) is list:
             safe_server_list += safe_servers
         else:
-            print(('\"safe_servers\" entry incorrectly specified ' +
-                   'in configuration!'))
-            print('Cannot proceed; exiting...')
+            LOG.error(('\"safe_servers\" entry incorrectly specified ' +
+                       'in configuration!'))
+            LOG.error('Cannot proceed; exiting...')
             sys.exit(1)
     else:
-        print('\"safe_servers\" entry not specified in configuration!')
-        print('Cannot proceed; exiting...')
+        LOG.error('\"safe_servers\" entry not specified in configuration!')
+        LOG.error('Cannot proceed; exiting...')
         sys.exit(1)
 
     return safe_server_list
@@ -181,11 +183,11 @@ def configure_safe_result_cache_seconds(presidio_app):
             presidio_config.get('safe_result_cache_seconds')
         )
     else:
-        print('Presidio app object somehow does not have')
-        print('PRESIDIO_CONFIG set, when trying to configure:')
-        print('safe_result_cache_seconds')
-        print('Proceeding - but this suggests something weird')
-        print('is going on.')
+        LOG.warning('Presidio app object somehow does not have')
+        LOG.warning('PRESIDIO_CONFIG set, when trying to configure:')
+        LOG.warning('safe_result_cache_seconds')
+        LOG.warning('Proceeding - but this suggests something weird')
+        LOG.warning('is going on...')
 
     if safe_result_cache_seconds is not None:
         if (((type(safe_result_cache_seconds) is int) or
@@ -195,8 +197,8 @@ def configure_safe_result_cache_seconds(presidio_app):
                 safe_result_cache_seconds
             )
         else:
-            print(('\"safe_result_cache_seconds\" incorrectly specified ' +
-                   'in configuration!'))
+            LOG.warning(('\"safe_result_cache_seconds\" incorrectly ' +
+                         'specified in configuration!'))
 
 
 def configure_ca_store(presidio_config):
@@ -205,16 +207,17 @@ def configure_ca_store(presidio_config):
         try:
             initialize_CA_store(ca_file)
         except EnvironmentError:
-            print('Error loading CA roots!')
-            print('Please ensure that the ca_file config entry points to the')
-            print('correct file, that the file has the correct format,')
-            print('and that it contains the data that you expect.')
-            print(('Continuing to run - ' +
-                   'but presidio may behave unpredictably...'))
+            LOG.warning('Error loading CA roots!')
+            LOG.warning('Please ensure that the ca_file config entry points')
+            LOG.warning('to the correct file, that the file has the correct')
+            LOG.warning(('format, and that it contains the data that you ' +
+                         'expect.'))
+            LOG.warning(('Continuing to run - ' +
+                         'but presidio may behave unpredictably...'))
     else:
-        print('ca_file entry not specified in config file!')
-        print(('Continuing to run - ' +
-               'but presidio may behave unpredictably...'))
+        LOG.warning('ca_file entry not specified in config file!')
+        LOG.warning(('Continuing to run - ' +
+                     'but presidio may behave unpredictably...'))
 
 
 def configure_bad_ideas(presidio_config):

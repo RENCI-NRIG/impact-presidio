@@ -5,6 +5,7 @@ import yaml
 
 from pathlib import Path
 
+from .Config import LOG
 
 _label_mech_fn = None
 _project_path = None
@@ -13,8 +14,11 @@ _xattr_label_base = 'user.us.cyberimpact.SAFE.SCID'
 
 
 def SafeLabelsFileCheck(path, dataset_SCID):
+    LOG.debug('_project_path is: %s' % _project_path)
+    LOG.debug('_project_path.parent is: %s' % _project_path.parent)
+
     if os.path.basename(path) == _safelabels_filename:
-        print('Ignoring SafeLabels file %s' % _safelabels_filename)
+        LOG.debug('Ignoring SafeLabels file %s' % _safelabels_filename)
         return False
 
     cur_path = Path(path)
@@ -22,6 +26,7 @@ def SafeLabelsFileCheck(path, dataset_SCID):
         cur_path = cur_path.parent
 
     while cur_path != _project_path.parent:
+        LOG.debug('cur_path is: %s' % cur_path)
         safeLabels = None
         try:
             with open((cur_path / _safelabels_filename), 'r') as sl:
@@ -41,20 +46,20 @@ def SafeLabelsFileCheck(path, dataset_SCID):
             # then refuse access (rather than walking up the directory tree
             # to check the parent's policy, which the admin may well have
             # been trying to supersede with the mis-written file.
-            print('Encountered error while parsing SafeLabels file!')
-            print('Error message:')
-            print(ye)
-            print('Failing safe, and disallowing access to: %s' %
-                  path)
+            LOG.error('Encountered error while parsing SafeLabels file!')
+            LOG.error('Error message:')
+            LOG.error(ye)
+            LOG.error('Failing safe, and disallowing access to: %s' %
+                      path)
             return False
 
         # Proceeding under the assumption that the safelabels file
         # loaded properly.
         file_version = safeLabels.get('version')
         if file_version is None:
-            print('SafeLabels file missing \'version\' specifier.')
-            print('Will attempt to check according to the most recent')
-            print('version specification...')
+            LOG.warning('SafeLabels file missing \'version\' specifier.')
+            LOG.warning('Will attempt to check according to the most recent')
+            LOG.warning('version specification...')
         elif file_version == 1.0:
             # Base case, since we have only one version, right now.
             pass
@@ -62,16 +67,17 @@ def SafeLabelsFileCheck(path, dataset_SCID):
             # Sigh. Specified an invalid version.
             # Try to parse using the most recent version,
             # and let the chips fall where they may.
-            print('SafeLabels file found with invalid \'version\' specified.')
-            print('Will attempt to check according to the most recent')
-            print('version specification...')
+            LOG.warning(('SafeLabels file found with invalid ' +
+                         '\'version\' specified.'))
+            LOG.warning('Will attempt to check according to the most recent')
+            LOG.warning('version specification...')
         label_check = SafeLabelsChecker_v1(path, dataset_SCID, safeLabels)
         if label_check:
-            print('Matching SCID found for %s' % path)
+            LOG.debug('Matching SCID found for %s' % path)
             return True
         else:
             break
-    print('No matching SCIDs found for %s' % path)
+    LOG.debug('No matching SCIDs found for %s' % path)
     return False
 
 
@@ -82,8 +88,8 @@ def SafeLabelsChecker_v1(path, dataset_SCID, safeLabels):
         pass
     elif type(per_file_overrides) is not dict:
         # Gotta fail safe again...
-        print('\'overrides\' specified, but not a dictionary.')
-        print('Failing safe...')
+        LOG.warning('\'overrides\' specified, but not a dictionary.')
+        LOG.warning('Failing safe...')
         return False
     else:
         keys = per_file_overrides.keys()
@@ -103,14 +109,14 @@ def SafeLabelsChecker_v1(path, dataset_SCID, safeLabels):
                     return True
             return False
         else:
-            print('Incorrectly specified value in \'overrides\' entry.')
-            print('Failing safe...')
+            LOG.warning('Incorrectly specified value in \'overrides\' entry.')
+            LOG.warning('Failing safe...')
             return False
 
     default_labels = safeLabels.get('default')
     if default_labels is None:
-        print('\'default\' entry unspecified!')
-        print('Failing safe...')
+        LOG.warning('\'default\' entry unspecified!')
+        LOG.warning('Failing safe...')
         return False
     elif type(default_labels) is str:
         return (default_labels == dataset_SCID)
@@ -120,8 +126,8 @@ def SafeLabelsChecker_v1(path, dataset_SCID, safeLabels):
                 return True
         return False
     else:
-        print('\'default\' specified, but not a valid value.')
-        print('Failing safe...')
+        LOG.warning('\'default\' specified, but not a valid value.')
+        LOG.warning('Failing safe...')
         return False
 
     # Tack a final false return at the end, to be defensive.
@@ -130,21 +136,21 @@ def SafeLabelsChecker_v1(path, dataset_SCID, safeLabels):
 
 def ExtendedAttributeLabelCheck(path, dataset_SCID):
     cur_path = Path(path)
-    # print('_project_path is: %s' % _project_path)
-    # print('_project_path.parent is: %s' % _project_path.parent)
+    LOG.debug('_project_path is: %s' % _project_path)
+    LOG.debug('_project_path.parent is: %s' % _project_path.parent)
     while cur_path != _project_path.parent:
-        # print('cur_path is: %s' % cur_path)
+        LOG.debug('cur_path is: %s' % cur_path)
         path_attrs = xattr.xattr(cur_path)
         attr_key_list = [e for e in path_attrs.list()
                          if _xattr_label_base in e]
 
         for attr in attr_key_list:
-            print('Checking attr: %s for path: %s' % (attr, cur_path))
+            LOG.debug('Checking xattr: %s for path: %s' % (attr, cur_path))
             if (path_attrs[attr]).decode('utf-8') == dataset_SCID:
-                print('Matching SCID found for %s' % path)
+                LOG.debug('Matching SCID found for %s' % path)
                 return True
         cur_path = cur_path.parent
-    print('No matching SCIDs found for %s' % path)
+    LOG.debug('No matching SCIDs found for %s' % path)
     return False
 
 
@@ -161,23 +167,23 @@ def configure_label_mech(presidio_config, project_path):
         if conf_label_mech == 'xattr':
             _label_mech_fn = ExtendedAttributeLabelCheck
         elif conf_label_mech != 'safelabels':
-            print('Unknown value specified for \"label_mech\"')
-            print('in configuration file.')
+            LOG.warning('Unknown value specified for \"label_mech\"')
+            LOG.warning('in configuration file.')
     else:
-        print('\"label_mech\" entry not specified in configuration.')
+        LOG.warning('\"label_mech\" entry not specified in configuration.')
 
     if _label_mech_fn == ExtendedAttributeLabelCheck:
-        print('Using extended attribute mechanism for SAFE labels.')
+        LOG.info('Using extended attribute mechanism for SAFE labels.')
         conf_xattr_label_base = presidio_config.get('xattr_label_base')
         if conf_xattr_label_base:
             _xattr_label_base = conf_xattr_label_base
-        print('Extended attribute label base is: %s' % _xattr_label_base)
+        LOG.info('Extended attribute label base is: %s' % _xattr_label_base)
     else:
-        print('Using default SafeLabels file mechanism for SAFE labels.')
+        LOG.info('Using default SafeLabels file mechanism for SAFE labels.')
         conf_safelabels_filename = presidio_config.get('safelabels_filename')
         if conf_safelabels_filename:
             _safelabels_filename = conf_safelabels_filename
-        print('SafeLabels file name is: %s' % _safelabels_filename)
+        LOG.info('SafeLabels file name is: %s' % _safelabels_filename)
 
 
 def check_labels(path, dataset_SCID):

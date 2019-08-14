@@ -9,16 +9,18 @@ from flask import request, abort, make_response
 from ns_jwt import NSJWT
 from datetime import datetime
 
+from .Config import LOG
+
 _CAStore = crypto.X509Store()
 _use_unverified_jwt = False
 
 
 def _BAD_IDEA_set_use_unverified_jwt():
     global _use_unverified_jwt
-    print('BAD IDEA: Use of unverified JWTs requested!')
-    print('BAD IDEA: This option is for debugging ONLY!')
-    print('BAD IDEA: Please, please don\'t use this in production!')
-    print('BAD IDEA: You have been warned...')
+    LOG.warning('BAD IDEA: Use of unverified JWTs requested!')
+    LOG.warning('BAD IDEA: This option is for debugging ONLY!')
+    LOG.warning('BAD IDEA: Please, please don\'t use this in production!')
+    LOG.warning('BAD IDEA: You have been warned...')
     _use_unverified_jwt = True
 
 
@@ -199,7 +201,7 @@ def process_ns_jwt(jwt, DN_from_cert):
         else:
             return (None, "Unable to find subject in JWT claims.")
     else:
-        print('BAD IDEA: Using unverified JWT claims, against advice...')
+        LOG.warning('BAD IDEA: Using unverified JWT claims, against advice...')
         verified_claims = unverified_claims
 
     return (verified_claims, None)

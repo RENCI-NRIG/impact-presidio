@@ -9,6 +9,7 @@ from flask import request, abort, render_template, send_file
 from flask_autoindex import AutoIndex, RootDirectory, Directory, __autoindex__
 from jinja2 import TemplateNotFound
 
+from .Config import LOG
 from .LabelMechs import check_labels
 
 
@@ -31,10 +32,11 @@ class SafeAutoIndex(AutoIndex):
         pconf = self.app.config['PRESIDIO_CONFIG']
         bypass_safe = pconf.get('BAD_IDEA_bypass_safe_servers')
         if bypass_safe:
-            print('BAD IDEA: Bypassing SAFE servers requested!')
-            print('BAD IDEA: This option is for debugging ONLY!')
-            print('BAD IDEA: Please, please don\'t use this in production!')
-            print('BAD IDEA: You have been warned...')
+            LOG.warning('BAD IDEA: Bypassing SAFE servers requested!')
+            LOG.warning('BAD IDEA: This option is for debugging ONLY!')
+            LOG.warning(('BAD IDEA: Please, please don\'t ' +
+                         'use this in production!'))
+            LOG.warning('BAD IDEA: You have been warned...')
             return True
 
         presidio_principal = self.app.config['PRESIDIO_PRINCIPAL']
@@ -55,25 +57,26 @@ class SafeAutoIndex(AutoIndex):
             # Check the cache first...
             safe_result = self.query_safe_result_cache(url, methodParams)
             if safe_result is not None:
-                print('Using cached SAFE query result')
-                print('Access decision for dataset %s by %s was: %s' %
-                      (user_DN, dataset_SCID, safe_result))
+                LOG.debug('Using cached SAFE query result')
+                LOG.debug('Access decision for dataset %s by %s was: %s' %
+                          (user_DN, dataset_SCID, safe_result))
                 return safe_result
 
             # Nothing in the cache? Time to ask SAFE.
-            print('Trying to query SAFE with following parameters: %s' %
-                  payload)
+            LOG.info('Trying to query SAFE with following parameters: %s' %
+                     payload)
 
             resp = None
             try:
                 resp = requests.post(url, data=payload,
                                      headers=headers, timeout=4)
             except Exception as e:
-                print('Error occurred while trying to query SAFE server: %s' %
-                      server)
-                print('Error message:')
-                print(e)
-                print('Trying next SAFE server in list (if any)...')
+                LOG.warning(('Error occurred while trying to ' +
+                            'query SAFE server: %s') %
+                            server)
+                LOG.warning('Error message:')
+                LOG.warning(e)
+                LOG.warning('Trying next SAFE server in list (if any)...')
                 continue
 
             status_code = None
@@ -82,36 +85,37 @@ class SafeAutoIndex(AutoIndex):
                 try:
                     safe_result = resp.json()
                 except Exception as e:
-                    print(('Error occurred while parsing response ' +
-                           'from SAFE server: %s') %
-                          server)
-                    print('Error message:')
-                    print(e)
-                    print('Trying next SAFE server in list (if any)...')
+                    LOG.warning(('Error occurred while parsing response ' +
+                                 'from SAFE server: %s') %
+                                server)
+                    LOG.warning('Error message:')
+                    LOG.warning(e)
+                    LOG.warning('Trying next SAFE server in list (if any)...')
                     continue
                 finally:
                     resp.close()
 
-            print('Status code from SAFE is: %s' % status_code)
+            LOG.debug('Status code from SAFE is: %s' % status_code)
             if status_code == 200:
                 if (safe_result.get('result') == 'succeed'):
-                    print('SAFE permitted access for %s to dataset %s' %
-                          (user_DN, dataset_SCID))
+                    LOG.debug('SAFE permitted access for %s to dataset %s' %
+                              (user_DN, dataset_SCID))
                     self.update_safe_result_cache(url, methodParams, True)
                     return True
                 else:
                     # We got a non-affirmative response.
-                    print('SAFE did not permit access for %s to dataset %s' %
-                          (user_DN, dataset_SCID))
+                    LOG.debug(('SAFE did not permit access for %s ' +
+                               'to dataset %s') %
+                              (user_DN, dataset_SCID))
                     self.update_safe_result_cache(url, methodParams, False)
                     return False
             else:
-                print('SAFE server %s returned status code %s' %
-                      (server, status_code))
-                print('Trying next SAFE server in list (if any)...')
+                LOG.debug('SAFE server %s returned status code %s' %
+                          (server, status_code))
+                LOG.debug('Trying next SAFE server in list (if any)...')
                 continue
 
-        print('None of the configured SAFE servers replied; denying access.')
+        LOG.warning('None of the configured SAFE servers replied; denying access.')
         return False
 
     def is_it_safe(self, path, dataset_SCID,
@@ -160,7 +164,7 @@ class SafeAutoIndex(AutoIndex):
         if request.verified_jwt_claims is None:
             return abort(401, "Notary Service JWT not found.")
 
-        print('Path is: %s' % abspath)
+        LOG.debug('Path is: %s' % abspath)
 
         dataset_SCID = request.verified_jwt_claims.get('data-set')
         if dataset_SCID is None:
@@ -244,9 +248,9 @@ class SafeAutoIndex(AutoIndex):
             if expire_seconds is not None:
                 self.safe_result_cache_seconds = expire_seconds
             else:
-                print('Using default value.')
-            print('SAFE result cache expiry time is %s seconds.' %
-                  self.safe_result_cache_seconds)
+                LOG.info('Using default value.')
+            LOG.info('SAFE result cache expiry time is %s seconds.' %
+                     self.safe_result_cache_seconds)
 
         key = (url + str(methodParams))
         expire_time = (datetime.now() +
