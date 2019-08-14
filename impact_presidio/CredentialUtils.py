@@ -62,7 +62,7 @@ def process_credentials():
                            "by Presidio, so that you can be securely " +
                            "identified. Please contact your administrator " +
                            "if you require assistance in obtaining client " +
-                           "certificate or installing one into your" +
+                           "certificate or installing one into your " +
                            "browser."))
 
     cert_x509 = crypto.load_certificate(crypto.FILETYPE_PEM, request.cert)
