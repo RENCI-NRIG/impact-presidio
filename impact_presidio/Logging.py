@@ -4,7 +4,7 @@ import sys
 
 LOGGER = 'impact_presidio_logger'
 LOG = logging.getLogger(LOGGER)
-LOG_FORMAT = '[%(asctime)s] [%(thread)d] [%(levelname)] %(message)s'
+LOG_FORMAT = '%(asctime)s - %(thread)d - %(levelname) | %(message)s'
 LOG_DATE_FORMAT = '%Y-%m-%d %H:%M:%S %z'
 
 _LogFile = '/var/log/impact_presidio/app.log'
