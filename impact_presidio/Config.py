@@ -3,7 +3,7 @@ import os.path
 import sys
 import yaml
 
-from impact_presidio.Logging import LOG, LOG_FORMAT
+from impact_presidio.Logging import LOG, LOG_FORMAT, LOG_DATE_FORMAT
 from impact_presidio.CredentialUtils import initialize_CA_store
 from impact_presidio.CredentialUtils import generate_presidio_principal
 from impact_presidio.CredentialUtils import _BAD_IDEA_set_use_unverified_jwt
@@ -12,7 +12,7 @@ _ConfFile = '/etc/impact_presidio/config.yaml'
 
 
 def load_presidio_config():
-    logging.basicConfig(format=LOG_FORMAT)
+    logging.basicConfig(format=LOG_FORMAT, datefmt=LOG_DATE_FORMAT)
 
     presidio_config = None
     try:

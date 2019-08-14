@@ -5,6 +5,7 @@ import sys
 LOGGER = 'impact_presidio_logger'
 LOG = logging.getLogger(LOGGER)
 LOG_FORMAT = '%(asctime)s - %(levelname)s - %(message)s'
+LOG_DATE_FORMAT = '%Y-%m-%d %H:%M:%S %z'
 
 _LogFile = '/var/log/impact_presidio/app.log'
 _LogLevel = 'INFO'
@@ -18,7 +19,7 @@ def configure_logging(presidio_config):
     conf_log_retain = presidio_config.get('log_file_retain')
     conf_log_size = presidio_config.get('log_file_size')
 
-    logging.basicConfig(format=LOG_FORMAT)
+    logging.basicConfig(format=LOG_FORMAT, datefmt=LOG_DATE_FORMAT)
 
     log_file = _LogFile
     if conf_log_file is not None:
