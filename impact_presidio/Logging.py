@@ -4,7 +4,7 @@ import sys
 
 LOGGER = 'impact_presidio_logger'
 LOG = logging.getLogger(LOGGER)
-LOG_FORMAT = '%(asctime)s - %(levelname)s - %(message)s'
+LOG_FORMAT = '%(asctime)s.%(msecs)03d - %(levelname)s - %(message)s'
 LOG_DATE_FORMAT = '%Y-%m-%d %H:%M:%S %z'
 
 _LogFile = '/var/log/impact_presidio/app.log'
@@ -83,7 +83,7 @@ def configure_logging(presidio_config):
         backupCount=log_retain,
         maxBytes=log_size)
     handler.setLevel(log_level)
-    formatter = logging.Formatter(LOG_FORMAT)
+    formatter = logging.Formatter(fmt=LOG_FORMAT, datefmt=LOG_DATE_FORMAT)
     handler.setFormatter(formatter)
     LOG.addHandler(handler)
     LOG.propagate = False
