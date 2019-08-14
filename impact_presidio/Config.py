@@ -1,8 +1,9 @@
+import logging
 import os.path
 import sys
 import yaml
 
-from impact_presidio.Logging import LOG
+from impact_presidio.Logging import LOG, LOG_FORMAT
 from impact_presidio.CredentialUtils import initialize_CA_store
 from impact_presidio.CredentialUtils import generate_presidio_principal
 from impact_presidio.CredentialUtils import _BAD_IDEA_set_use_unverified_jwt
@@ -11,21 +12,23 @@ _ConfFile = '/etc/impact_presidio/config.yaml'
 
 
 def load_presidio_config():
+    logging.basicConfig(format=LOG_FORMAT)
+
     presidio_config = None
     try:
         with open(_ConfFile, 'r') as cf:
             presidio_config = yaml.safe_load(cf)
     except EnvironmentError as enve:
-        print('FATAL ERROR: Could not read configuration file!')
-        print('Error message:')
-        print(enve)
-        print('Cannot proceed; exiting...')
+        logging.error('FATAL ERROR: Could not read configuration file!')
+        logging.error('Error message:')
+        logging.error(enve)
+        logging.error('Cannot proceed; exiting...')
         sys.exit(1)
     except yaml.YAMLError as ye:
-        print('FATAL ERROR: Could not load configuration file!')
-        print('Error message:')
-        print(ye)
-        print('Cannot proceed; exiting...')
+        logging.error('FATAL ERROR: Could not load configuration file!')
+        logging.error('Error message:')
+        logging.error(ye)
+        logging.error('Cannot proceed; exiting...')
         sys.exit(1)
 
     return presidio_config

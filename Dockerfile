@@ -12,7 +12,7 @@ ENV PROJECTS /srv/projects
 ENV LOGDIR /var/log/impact_presidio
 
 # Add dependencies
-RUN apk add --update --no-cache build-base make libffi-dev openssl-dev
+RUN apk add --update --no-cache build-base make libffi-dev openssl-dev tzdata
 
 # Create the directory structure.
 # "config" and "projects" are mountpoints intended for Docker bind mounts
@@ -49,6 +49,9 @@ ENV WORKER_TIMEOUT 40
 
 # Define allowed IPs, with a default.
 ENV ALLOWED_IPS localhost
+
+# Define time zone, for logs
+ENV TZ America/New_York
 
 # Change user, and run.
 WORKDIR ${DEPLOYMENT}
