@@ -185,23 +185,24 @@ def process_ns_jwt(jwt, DN_from_cert):
         else:
             return (None, "Unable to find ns-token in JWT claims.")
 
-        expiry = verified_claims.get('exp')
-        if expiry:
-            dte = datetime.fromtimestamp(expiry)
-            if datetime.now() > dte:
-                return (None, "JWT has expired.")
-        else:
-            return (None, "Unable to find expiry in JWT claims.")
-
-        userDN = verified_claims.get('sub')
-        if userDN:
-            if userDN != DN_from_cert:
-                return (None, ("JWT subject does not match " +
-                               "value from client certificate."))
-        else:
-            return (None, "Unable to find subject in JWT claims.")
     else:
         LOG.warning('BAD IDEA: Using unverified JWT claims, against advice...')
         verified_claims = unverified_claims
+
+    expiry = verified_claims.get('exp')
+    if expiry:
+        dte = datetime.fromtimestamp(expiry)
+        if datetime.now() > dte:
+            return (None, "JWT has expired.")
+    else:
+        return (None, "Unable to find expiry in JWT claims.")
+
+    userDN = verified_claims.get('sub')
+    if userDN:
+        if userDN != DN_from_cert:
+            return (None, ("JWT subject does not match " +
+                           "value from client certificate."))
+    else:
+        return (None, "Unable to find subject in JWT claims.")
 
     return (verified_claims, None)
