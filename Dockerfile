@@ -5,11 +5,15 @@
 # Pull base image.
 FROM python:3-alpine
 
-# Define the deployment directory
+# Define the deployment directories
 ENV CONFIG /etc/impact_presidio
 ENV DEPLOYMENT /opt/presidio-deploy
 ENV PROJECTS /srv/projects
 ENV LOGDIR /var/log/impact_presidio
+
+# Define user and group to use
+ENV GUNICORN_USER nobody
+ENV GUNICORN_GROUP nogroup
 
 # Add dependencies
 RUN apk add --update --no-cache build-base make libffi-dev openssl-dev tzdata
@@ -19,7 +23,8 @@ RUN apk add --update --no-cache build-base make libffi-dev openssl-dev tzdata
 RUN mkdir -p ${CONFIG} && \
         mkdir -p ${DEPLOYMENT} && \
         mkdir -p ${PROJECTS} && \
-        mkdir -p ${LOGDIR}
+        mkdir -p ${LOGDIR} && \
+        chown -R ${GUNICORN_USER}:${GUNICORN_GROUP} ${LOGDIR}
 
 # Populate the directory structure.
 COPY setup.py ${DEPLOYMENT}
@@ -54,5 +59,6 @@ ENV ALLOWED_IPS localhost
 ENV TZ America/New_York
 
 # Change user, and run.
+USER ${GUNICORN_USER}
 WORKDIR ${DEPLOYMENT}
 ENTRYPOINT gunicorn --bind=0.0.0.0:8000 --workers="${NUM_WORKERS}" --worker-class=gthread --threads="${NUM_THREADS}" --max-requests="${MAX_REQUESTS_PER_WORKER}" --max-requests-jitter="${MAX_REQUESTS_JITTER}" --timeout="${WORKER_TIMEOUT}" --forwarded-allow-ips="${ALLOWED_IPS}" --error-logfile=${LOGDIR}/error_log --access-logfile=${LOGDIR}/access_log --capture-output impact_presidio:app
