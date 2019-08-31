@@ -1,4 +1,5 @@
 project_path: /srv/projects/
+web_root: /datasets
 ca_file: /etc/impact_presidio/ca-certs.pem
 key_file: /etc/impact_presidio/key.pem
 safe_servers: [ safe:7777 ]
