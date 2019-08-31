@@ -46,6 +46,26 @@ def get_project_path(presidio_config):
     return project_path
 
 
+def get_web_root(presidio_config):
+    default_web_root = '/datasets'
+    web_root = presidio_config.get('web_root')
+
+    if type(web_root) is not str:
+        LOG.info('\"web_root\" configuration entry missing or invalid.')
+        LOG.info(('Proceeding with default value of: %s' % default_web_root))
+        web_root = default_web_root
+
+    # Ensure we begin with /
+    if (web_root[0] != '/'):
+        web_root = ('/' + web_root)
+
+    # Ensure we don't end with /
+    if (web_root[-1] == '/'):
+        web_root = web_root[:-1]
+
+    return web_root
+
+
 def get_presidio_principal(presidio_config):
     key_file = presidio_config.get('key_file')
 

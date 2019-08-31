@@ -39,8 +39,8 @@ server {
   proxy_connect_timeout 5s;
   proxy_read_timeout 180s;
 
-  # Send everything to presidio...
-  location / {
+  # Send everything under the specified location to presidio...
+  location /PRESIDIO_WEB_ROOT {
       proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
       proxy_set_header X-Forwarded-Proto https;
       proxy_set_header X-SSL-Cert $ssl_client_escaped_cert;

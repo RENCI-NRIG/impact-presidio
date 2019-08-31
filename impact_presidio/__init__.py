@@ -26,6 +26,7 @@ configure_logging(presidio_config)
 presidio_principal = Config.get_presidio_principal(presidio_config)
 safe_server_list = Config.get_safe_server_list(presidio_config)
 project_path = Config.get_project_path(presidio_config)
+web_root = Config.get_web_root(presidio_config)
 
 app.config['PRESIDIO_CONFIG'] = presidio_config
 app.config['PRESIDIO_PRINCIPAL'] = presidio_principal
@@ -44,8 +45,8 @@ autoIndex = AutoIndex(app, browse_root=project_path, add_url_rules=False)
 app.before_request(process_credentials)
 
 
-@app.route('/', methods=['POST', 'GET', 'PUT'])
-@app.route('/<path:path>', methods=['POST', 'GET', 'PUT'])
+@app.route(web_root, methods=['POST', 'GET', 'PUT'])
+@app.route((web_root + '/<path:path>'), methods=['POST', 'GET', 'PUT'])
 def autoindex(path='.'):
     return autoIndex.render_autoindex(path)
 
