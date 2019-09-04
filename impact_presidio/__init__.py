@@ -45,7 +45,7 @@ autoIndex = AutoIndex(app, browse_root=project_path, add_url_rules=False)
 app.before_request(process_credentials)
 
 
-@app.route(web_root, methods=['POST', 'GET', 'PUT'])
+@app.route((web_root + '/'), methods=['POST', 'GET', 'PUT'])
 @app.route((web_root + '/<path:path>'), methods=['POST', 'GET', 'PUT'])
 def autoindex(path='.'):
     return autoIndex.render_autoindex(path)

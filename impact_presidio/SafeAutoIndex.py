@@ -115,7 +115,8 @@ class SafeAutoIndex(AutoIndex):
                 LOG.debug('Trying next SAFE server in list (if any)...')
                 continue
 
-        LOG.warning('None of the configured SAFE servers replied; denying access.')
+        LOG.warning(('None of the configured SAFE servers replied;' +
+                     'denying access.'))
         return False
 
     def is_it_safe(self, path, dataset_SCID,
