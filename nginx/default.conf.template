@@ -41,9 +41,10 @@ server {
 
   # Send everything under the specified location to presidio.
   #
-  # We default to '/datasets' - but you should modify this to
-  # match what you specify for "web_root" in presidio's config.yaml
-  location /datasets {
+  # Presidio uses '/datasets' by default (and flask_autoindex, on which it relies,
+  # uses '/__autoindex__'). Feel free to make the below more specific, given these constraints
+  # (and the value of what you specify for "web_root" in presidio's config.yaml).
+  location / {
       proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
       proxy_set_header X-Forwarded-Proto https;
       proxy_set_header X-SSL-Cert $ssl_client_escaped_cert;
