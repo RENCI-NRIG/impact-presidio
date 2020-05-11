@@ -162,7 +162,11 @@ class SafeAutoIndex(AutoIndex):
 
         while e_slice:
             access_approved = (
-                aioloop.run_until_complete(self.safe_check_slice(e_slice))
+                aioloop.run_until_complete(self.safe_check_slice(e_slice,
+                                                                 dataset_SCID,
+                                                                 user_DN,
+                                                                 ns_token,
+                                                                 project_ID))
                 )
             for entry in access_approved:
                 yield entry
