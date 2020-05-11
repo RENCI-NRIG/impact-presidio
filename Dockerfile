@@ -38,19 +38,13 @@ RUN cd ${DEPLOYMENT} && \
 EXPOSE 8000
 
 # Define number of workers
-ENV NUM_WORKERS 1
-
-# Define number of workers
-ENV NUM_THREADS 10
+ENV NUM_WORKERS 6
 
 # Maximum number of requests per worker
-ENV MAX_REQUESTS_PER_WORKER 20
+ENV MAX_REQUESTS_PER_WORKER 50
 
 # Randomization factor, for max requests
-ENV MAX_REQUESTS_JITTER 10
-
-# Define worker timeout
-ENV WORKER_TIMEOUT 40
+ENV MAX_REQUESTS_JITTER 20
 
 # Define allowed IPs, with a default.
 ENV ALLOWED_IPS localhost
@@ -61,4 +55,4 @@ ENV TZ America/New_York
 # Change user, and run.
 USER ${GUNICORN_USER}
 WORKDIR ${DEPLOYMENT}
-ENTRYPOINT gunicorn --bind=0.0.0.0:8000 --workers="${NUM_WORKERS}" --worker-class=gthread --threads="${NUM_THREADS}" --max-requests="${MAX_REQUESTS_PER_WORKER}" --max-requests-jitter="${MAX_REQUESTS_JITTER}" --timeout="${WORKER_TIMEOUT}" --forwarded-allow-ips="${ALLOWED_IPS}" --error-logfile=${LOGDIR}/error_log --access-logfile=${LOGDIR}/access_log --capture-output impact_presidio:app
+ENTRYPOINT gunicorn --bind=0.0.0.0:8000 --workers="${NUM_WORKERS}" --max-requests="${MAX_REQUESTS_PER_WORKER}" --max-requests-jitter="${MAX_REQUESTS_JITTER}" --forwarded-allow-ips="${ALLOWED_IPS}" --error-logfile=${LOGDIR}/error_log --access-logfile=${LOGDIR}/access_log --capture-output impact_presidio:app
