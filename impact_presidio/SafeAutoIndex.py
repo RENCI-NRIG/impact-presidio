@@ -25,7 +25,7 @@ class SafeAutoIndex(AutoIndex):
     template_prefix = ''
     safe_result_cache = dict()
     safe_result_cache_seconds = 2  # Seconds before results are stale
-    metrics_logger = create_metrics_logger
+    metrics_logger = create_metrics_logger()
 
     def __init__(self, app, browse_root=None, **silk_options):
         super(SafeAutoIndex, self).__init__(app, browse_root,
