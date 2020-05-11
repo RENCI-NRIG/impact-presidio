@@ -173,9 +173,9 @@ class SafeAutoIndex(AutoIndex):
             e_slice = tuple(itertools.islice(entries, slice_size))
 
         metrics_end = timer()
-        self.metrics_logger.info('Run', metrics_uuid, 'for directory',
+        self.metrics_logger.info('Run', str(metrics_uuid), 'for directory',
                                  abspath, 'completed in',
-                                 (metrics_end - metrics_start), 'seconds')
+                                 str(metrics_end - metrics_start), 'seconds')
 
     def render_autoindex(self, path, browse_root=None, template=None,
                          template_context=None, endpoint='.autoindex',
