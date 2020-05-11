@@ -154,7 +154,7 @@ class SafeAutoIndex(AutoIndex):
     def safe_entry_generator(self, abspath, entries, dataset_SCID,
                              user_DN, ns_token, project_ID):
         aioloop = asyncio.get_event_loop()
-        slice_size = 4 * cpu_count()
+        slice_size = 8 * cpu_count()
         e_slice = tuple(itertools.islice(entries, slice_size))
 
         metrics_uuid = uuid.uuid4()
@@ -174,7 +174,7 @@ class SafeAutoIndex(AutoIndex):
 
         metrics_end = timer()
         metrics_message = (
-            f'Run {metrics_uuid} for directory {abspath}'
+            f'Run {metrics_uuid} for directory {abspath} '
             f'completed in {metrics_end - metrics_start} seconds'
         )
         self.metrics_logger.info(metrics_message)
