@@ -54,7 +54,7 @@ def configure_logging(presidio_config):
     if conf_log_level is not None:
         try:
             log_level = getattr(logging, conf_log_level.upper())
-        except:
+        except Exception:
             logging.warning('ERROR: Invalid value specified for log_level:')
             logging.warning('%s' % conf_log_level)
             logging.warning('Proceeding using the default')
@@ -89,3 +89,16 @@ def configure_logging(presidio_config):
     LOG.addHandler(handler)
     LOG.propagate = False
     LOG.info('Logging Started')
+
+
+def create_metrics_logger():
+    metrics_logfile = '/var/log/impact_presidio/metrics.log'
+    handler = logging.FileHandler(metrics_logfile)
+    formatter = logging.Formatter(fmt=LOG_FORMAT, datefmt=LOG_DATE_FORMAT)
+    handler.setFormatter(formatter)
+
+    logger = logging.getLogger('impact_presidio_metrics_logger')
+    logger.setLevel(logging.INFO)
+    logger.addHandler(handler)
+
+    return logger

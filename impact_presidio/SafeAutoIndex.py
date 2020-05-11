@@ -1,15 +1,20 @@
+import asyncio
+import itertools
 import json
 import os.path
 import random
 import re
 import requests
+import uuid
 
 from datetime import datetime, timedelta
 from flask import request, abort, render_template, send_file
 from flask_autoindex import AutoIndex, RootDirectory, Directory, __autoindex__
 from jinja2 import TemplateNotFound
+from os import cpu_count
+from timeit import default_timer as timer
 
-from impact_presidio.Logging import LOG
+from impact_presidio.Logging import LOG, create_metrics_logger
 from impact_presidio.LabelMechs import check_labels
 
 
@@ -20,6 +25,7 @@ class SafeAutoIndex(AutoIndex):
     template_prefix = ''
     safe_result_cache = dict()
     safe_result_cache_seconds = 2  # Seconds before results are stale
+    metrics_logger = create_metrics_logger
 
     def __init__(self, app, browse_root=None, **silk_options):
         super(SafeAutoIndex, self).__init__(app, browse_root,
@@ -126,12 +132,46 @@ class SafeAutoIndex(AutoIndex):
                                           ns_token, project_ID)
         return False
 
-    def safe_entry_generator(self, entries, dataset_SCID,
-                             user_DN, ns_token, project_ID):
+    async def safe_check_slice(self, entries, dataset_SCID,
+                               user_DN, ns_token, project_ID):
+        aioloop = asyncio.get_event_loop()
+        futures = []
+        access_approved = []
+
         for e in entries:
-            if (self.is_it_safe(e.abspath, dataset_SCID,
-                                user_DN, ns_token, project_ID)):
-                yield e
+            future = aioloop.run_in_executor(None, self.is_it_safe,
+                                             e.abspath, dataset_SCID,
+                                             user_DN, ns_token, project_ID)
+            futures.append((e, future))
+
+        for entry, future in futures:
+            access_approval = await future
+            if access_approval:
+                access_approved.append(entry)
+
+        return access_approved
+
+    def safe_entry_generator(self, abspath, entries, dataset_SCID,
+                             user_DN, ns_token, project_ID):
+        aioloop = asyncio.get_event_loop()
+        slice_size = 4 * cpu_count()
+        e_slice = tuple(itertools.islice(entries, slice_size))
+
+        metrics_uuid = uuid.uuid4()
+        metrics_start = timer()
+
+        while e_slice:
+            access_approved = (
+                aioloop.run_until_complete(self.safe_check_slice(e_slice))
+                )
+            for entry in access_approved:
+                yield entry
+            e_slice = tuple(itertools.islice(entries, slice_size))
+
+        metrics_end = timer()
+        self.metrics_logger.info('Run', metrics_uuid, 'for directory',
+                                 abspath, 'completed in',
+                                 (metrics_end - metrics_start), 'seconds')
 
     def render_autoindex(self, path, browse_root=None, template=None,
                          template_context=None, endpoint='.autoindex',
@@ -151,8 +191,8 @@ class SafeAutoIndex(AutoIndex):
                          whether to show hidden files (starting with '.')
         :param sort_by: the property to sort the entrys by.
         :param mimetype:
-                     set static mime type for files (no auto detection).
-        """
+                     set static mime type for files (no auto detection)."""
+
         if browse_root:
             rootdir = RootDirectory(browse_root, autoindex=self)
         else:
@@ -161,24 +201,24 @@ class SafeAutoIndex(AutoIndex):
         abspath = os.path.join(rootdir.abspath, path)
 
         if request.cert is None:
-            return abort(401, "Client certificate not found.")
+            return abort(401, 'Client certificate not found.')
         if request.verified_jwt_claims is None:
-            return abort(401, "Notary Service JWT not found.")
+            return abort(401, 'Notary Service JWT not found.')
 
         LOG.debug('Path is: %s' % abspath)
 
         dataset_SCID = request.verified_jwt_claims.get('data-set')
         if dataset_SCID is None:
-            return abort(401, "Unable to find data-set in JWT claims.")
+            return abort(401, 'Unable to find data-set in JWT claims.')
         user_DN = request.verified_jwt_claims.get('sub')
         if user_DN is None:
-            return abort(401, "Unable to find sub in JWT claims.")
+            return abort(401, 'Unable to find sub in JWT claims.')
         ns_token = request.verified_jwt_claims.get('ns-token')
         if ns_token is None:
-            return abort(401, "Unable to find ns-token in JWT claims.")
+            return abort(401, 'Unable to find ns-token in JWT claims.')
         project_ID = request.verified_jwt_claims.get('project-id')
         if project_ID is None:
-            return abort(401, "Unable to find project-id in JWT claims.")
+            return abort(401, 'Unable to find project-id in JWT claims.')
 
         if os.path.isdir(abspath):
             sort_by = request.args.get('sort_by', sort_by)
@@ -198,7 +238,8 @@ class SafeAutoIndex(AutoIndex):
             # The "safe_entries" generator will call out to SAFE,
             # which will, in turn, make the decision of whether to display
             # a given entry.
-            safe_entries = self.safe_entry_generator(entries,
+            safe_entries = self.safe_entry_generator(abspath,
+                                                     entries,
                                                      dataset_SCID,
                                                      user_DN,
                                                      ns_token,
