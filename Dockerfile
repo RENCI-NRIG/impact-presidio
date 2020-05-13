@@ -38,13 +38,13 @@ RUN cd ${DEPLOYMENT} && \
 EXPOSE 8000
 
 # Define number of workers
-ENV NUM_WORKERS 6
+ENV NUM_WORKERS 10
 
 # Maximum number of requests per worker
-ENV MAX_REQUESTS_PER_WORKER 50
+ENV MAX_REQUESTS_PER_WORKER 100
 
 # Define worker timeout
-ENV WORKER_TIMEOUT 180
+ENV WORKER_TIMEOUT 300
 
 # Randomization factor, for max requests
 ENV MAX_REQUESTS_JITTER 20
@@ -58,4 +58,4 @@ ENV TZ America/New_York
 # Change user, and run.
 USER ${GUNICORN_USER}
 WORKDIR ${DEPLOYMENT}
-ENTRYPOINT gunicorn --bind=0.0.0.0:8000 --workers="${NUM_WORKERS}" --max-requests="${MAX_REQUESTS_PER_WORKER}" --max-requests-jitter="${MAX_REQUESTS_JITTER}" --timeout="${WORKER_TIMEOUT}" --forwarded-allow-ips="${ALLOWED_IPS}" --error-logfile=${LOGDIR}/error_log --access-logfile=${LOGDIR}/access_log --capture-output impact_presidio:app
+ENTRYPOINT gunicorn --bind=0.0.0.0:8000 --worker-class=gevent --workers="${NUM_WORKERS}" --max-requests="${MAX_REQUESTS_PER_WORKER}" --max-requests-jitter="${MAX_REQUESTS_JITTER}" --timeout="${WORKER_TIMEOUT}" --keep-alive=0 --forwarded-allow-ips="${ALLOWED_IPS}" --error-logfile=${LOGDIR}/error_log --access-logfile=${LOGDIR}/access_log --capture-output --reuse-port impact_presidio:app

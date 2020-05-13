@@ -15,10 +15,9 @@ services:
       - frontend
       - backend
     environment:
-      - NUM_WORKERS=${NUM_WORKERS:-1}
-      - NUM_THREADS=${NUM_THREADS:-10}
-      - MAX_REQUESTS_PER_WORKER=${MAX_REQUESTS_PER_WORKER:-20}
-      - WORKER_TIMEOUT=${WORKER_TIMEOUT:-40}
+      - NUM_WORKERS=${NUM_WORKERS:-10}
+      - MAX_REQUESTS_PER_WORKER=${MAX_REQUESTS_PER_WORKER:-100}
+      - WORKER_TIMEOUT=${WORKER_TIMEOUT:-300}
     volumes:
       - ./config:/etc/impact_presidio/
       - ./projects:/srv/projects

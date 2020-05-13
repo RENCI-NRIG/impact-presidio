@@ -14,6 +14,7 @@ setup(
     install_requires=[
         'Flask-AutoIndex >= 0.6.2',
         'gunicorn >= 19.9.0',
+        'gevent >= 1.4',
         'pyOpenSSL >= 18.0.0',
         'pem >= 19.1.0',
         'PyYAML >= 3.13',

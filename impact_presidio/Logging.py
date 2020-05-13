@@ -100,5 +100,6 @@ def create_metrics_logger():
     logger = logging.getLogger('impact_presidio_metrics_logger')
     logger.setLevel(logging.INFO)
     logger.addHandler(handler)
+    logger.propagate = False
 
     return logger

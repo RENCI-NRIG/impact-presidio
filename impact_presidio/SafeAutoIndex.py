@@ -1,5 +1,3 @@
-import asyncio
-import itertools
 import json
 import os.path
 import random
@@ -11,7 +9,6 @@ from datetime import datetime, timedelta
 from flask import request, abort, render_template, send_file
 from flask_autoindex import AutoIndex, RootDirectory, Directory, __autoindex__
 from jinja2 import TemplateNotFound
-from os import cpu_count
 from timeit import default_timer as timer
 
 from impact_presidio.Logging import LOG, create_metrics_logger
@@ -132,45 +129,15 @@ class SafeAutoIndex(AutoIndex):
                                           ns_token, project_ID)
         return False
 
-    async def safe_check_slice(self, entries, dataset_SCID,
-                               user_DN, ns_token, project_ID):
-        aioloop = asyncio.get_event_loop()
-        futures = []
-        access_approved = []
-
-        for e in entries:
-            future = aioloop.run_in_executor(None, self.is_it_safe,
-                                             e.abspath, dataset_SCID,
-                                             user_DN, ns_token, project_ID)
-            futures.append((e, future))
-
-        for entry, future in futures:
-            access_approval = await future
-            if access_approval:
-                access_approved.append(entry)
-
-        return access_approved
-
     def safe_entry_generator(self, abspath, entries, dataset_SCID,
                              user_DN, ns_token, project_ID):
-        aioloop = asyncio.get_event_loop()
-        slice_size = 8 * cpu_count()
-        e_slice = tuple(itertools.islice(entries, slice_size))
-
         metrics_uuid = uuid.uuid4()
         metrics_start = timer()
 
-        while e_slice:
-            access_approved = (
-                aioloop.run_until_complete(self.safe_check_slice(e_slice,
-                                                                 dataset_SCID,
-                                                                 user_DN,
-                                                                 ns_token,
-                                                                 project_ID))
-                )
-            for entry in access_approved:
-                yield entry
-            e_slice = tuple(itertools.islice(entries, slice_size))
+        for e in entries:
+            if (self.is_it_safe(e.abspath, dataset_SCID,
+                                user_DN, ns_token, project_ID)):
+                yield e
 
         metrics_end = timer()
         metrics_message = (
