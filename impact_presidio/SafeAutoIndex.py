@@ -10,7 +10,7 @@ from flask_autoindex import AutoIndex, RootDirectory, Directory, __autoindex__
 from jinja2 import TemplateNotFound
 from timeit import default_timer as timer
 
-from impact_presidio.Logging import LOG
+from impact_presidio.Logging import LOG, METRICS_LOG
 from impact_presidio.LabelMechs import check_labels
 
 
@@ -143,7 +143,7 @@ class SafeAutoIndex(AutoIndex):
             f'on directory {abspath} '
             f'completed in {entries_end - entries_start} seconds'
         )
-        self.app.metrics_logger.info(entries_message)
+        METRICS_LOG.info(entries_message)
 
     def render_autoindex(self, path, browse_root=None, template=None,
                          template_context=None, endpoint='.autoindex',

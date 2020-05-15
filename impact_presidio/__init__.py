@@ -2,7 +2,6 @@ __version__ = '0.0.1'
 
 import sys
 import flask_autoindex
-import uuid
 
 from werkzeug.middleware.proxy_fix import ProxyFix
 from flask import Flask, render_template, request
@@ -10,7 +9,8 @@ from flask_autoindex import AutoIndex
 from timeit import default_timer as timer
 
 from impact_presidio import Config
-from impact_presidio.Logging import configure_logging, create_metrics_logger
+from impact_presidio.Logging import configure_logging
+from impact_presidio.Logging import create_metrics_logger, METRICS_LOG
 from impact_presidio.LabelMechs import configure_label_mech
 from impact_presidio.CredentialUtils import process_credentials
 from impact_presidio.SafeAutoIndex import SafeAutoIndex
@@ -24,6 +24,7 @@ app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1)
 
 presidio_config = Config.load_presidio_config()
 configure_logging(presidio_config)
+create_metrics_logger()
 
 presidio_principal = Config.get_presidio_principal(presidio_config)
 safe_server_list = Config.get_safe_server_list(presidio_config)
@@ -33,7 +34,6 @@ web_root = Config.get_web_root(presidio_config)
 app.config['PRESIDIO_CONFIG'] = presidio_config
 app.config['PRESIDIO_PRINCIPAL'] = presidio_principal
 app.config['SAFE_SERVER_LIST'] = safe_server_list
-app.metrics_logger = create_metrics_logger()
 
 Config.configure_ca_store(presidio_config)
 Config.configure_safe_result_cache_seconds(app)
@@ -51,17 +51,14 @@ app.before_request(process_credentials)
 @app.route((web_root + '/'), methods=['POST', 'GET', 'PUT'])
 @app.route((web_root + '/<path:path>'), methods=['POST', 'GET', 'PUT'])
 def autoindex(path='.'):
-    request.uuid = uuid.uuid4()
-
-    request_start = timer()
     route_result = autoIndex.render_autoindex(path)
     request_end = timer()
 
     route_message = (
         f'Request {request.uuid} processing '
-        f'completed in {request_end - request_start} seconds'
+        f'completed in {request_end - request.start_time} seconds'
     )
-    app.metrics_logger.info(route_message)
+    METRICS_LOG.info(route_message)
 
     return route_result
 

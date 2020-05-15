@@ -8,6 +8,9 @@ LOG_FORMAT = ('[%(asctime)s] [%(process)d] [%(filename)s] ' +
               '[%(levelname)s] %(message)s')
 LOG_DATE_FORMAT = '%Y-%m-%d %H:%M:%S %z'
 
+METRICS_LOGGER = 'impact_presidio_metrics_logger'
+METRICS_LOG = logging.getLogger(METRICS_LOGGER)
+
 _LogFile = '/var/log/impact_presidio/app.log'
 _LogLevel = 'INFO'
 _LogFileRetain = '5'
@@ -97,9 +100,6 @@ def create_metrics_logger():
     formatter = logging.Formatter(fmt=LOG_FORMAT, datefmt=LOG_DATE_FORMAT)
     handler.setFormatter(formatter)
 
-    logger = logging.getLogger('impact_presidio_metrics_logger')
-    logger.setLevel(logging.INFO)
-    logger.addHandler(handler)
-    logger.propagate = False
-
-    return logger
+    METRICS_LOG.setLevel(logging.INFO)
+    METRICS_LOG.addHandler(handler)
+    METRICS_LOG.propagate = False

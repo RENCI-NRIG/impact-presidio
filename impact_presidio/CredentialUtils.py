@@ -4,12 +4,14 @@ import base64
 import pem
 import ssl
 import urllib.parse
+import uuid
 
 from flask import request, abort, make_response
 from ns_jwt import NSJWT
 from datetime import datetime
+from timeit import default_timer as timer
 
-from impact_presidio.Logging import LOG
+from impact_presidio.Logging import LOG, METRICS_LOG
 
 _CAStore = crypto.X509Store()
 _use_unverified_jwt = False
@@ -53,6 +55,9 @@ def generate_presidio_principal(keyFile):
 
 
 def process_credentials():
+    request.uuid = uuid.uuid4()
+    request.start_time = timer()
+
     url_encoded_cert = request.headers.get('X-SSL-Cert')
     if url_encoded_cert:
         request.cert = urllib.parse.unquote(url_encoded_cert)
@@ -126,6 +131,12 @@ def process_credentials():
 
     if jwt_claims:
         request.verified_jwt_claims = jwt_claims
+        cred_end = timer()
+        cred_message = (
+            f'Credential processing for request {request.uuid} '
+            f'completed in {cred_end - request.start_time} seconds'
+        )
+        METRICS_LOG.info(cred_message)
     else:
         return abort(401, jwt_error)
 
@@ -137,13 +148,13 @@ def process_ns_jwt(jwt, DN_from_cert):
     # First, decode without verification, to get issuer.
     try:
         ns_jwt.decode(publicKey=None)
-    except:
+    except Exception:
         return (None, "Notary Service JWT failed unverified decode.")
 
     unverified_claims = None
     try:
         unverified_claims = ns_jwt.getClaims()
-    except:
+    except Exception:
         return (None, "Failed to extract unverified claims from JWT.")
 
     verified_claims = None
@@ -155,7 +166,7 @@ def process_ns_jwt(jwt, DN_from_cert):
                 ns_cert = ssl.get_server_certificate((ns_fqdn, 443))
                 ns_x509 = crypto.load_certificate(crypto.FILETYPE_PEM, ns_cert)
                 ns_pubkey = ns_x509.get_pubkey()
-            except:
+            except Exception:
                 return (None, ('Unable to get server certificate ' +
                                'from Notary Service.'))
         else:
@@ -166,14 +177,14 @@ def process_ns_jwt(jwt, DN_from_cert):
                 ns_pubkey_pem = crypto.dump_publickey(crypto.FILETYPE_PEM,
                                                       ns_pubkey)
                 ns_jwt.decode(publicKey=ns_pubkey_pem)
-            except:
+            except Exception:
                 return (None, "Notary Service JWT failed verified decode.")
         else:
             return (None, "Could not obtain public key from JWT issuer.")
 
         try:
             verified_claims = ns_jwt.getClaims()
-        except:
+        except Exception:
             return (None, "Failed to extract verified claims from JWT.")
 
         computed_ns_token = generate_safe_principal_id(ns_pubkey)
