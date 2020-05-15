@@ -3,7 +3,6 @@ import os.path
 import random
 import re
 import requests
-import uuid
 
 from datetime import datetime, timedelta
 from flask import request, abort, render_template, send_file
@@ -11,7 +10,7 @@ from flask_autoindex import AutoIndex, RootDirectory, Directory, __autoindex__
 from jinja2 import TemplateNotFound
 from timeit import default_timer as timer
 
-from impact_presidio.Logging import LOG, create_metrics_logger
+from impact_presidio.Logging import LOG
 from impact_presidio.LabelMechs import check_labels
 
 
@@ -22,7 +21,6 @@ class SafeAutoIndex(AutoIndex):
     template_prefix = ''
     safe_result_cache = dict()
     safe_result_cache_seconds = 2  # Seconds before results are stale
-    metrics_logger = create_metrics_logger()
 
     def __init__(self, app, browse_root=None, **silk_options):
         super(SafeAutoIndex, self).__init__(app, browse_root,
@@ -129,22 +127,23 @@ class SafeAutoIndex(AutoIndex):
                                           ns_token, project_ID)
         return False
 
-    def safe_entry_generator(self, abspath, entries, dataset_SCID,
+    def safe_entry_generator(self, abspath, request_uuid,
+                             entries, dataset_SCID,
                              user_DN, ns_token, project_ID):
-        metrics_uuid = uuid.uuid4()
-        metrics_start = timer()
+        entries_start = timer()
 
         for e in entries:
             if (self.is_it_safe(e.abspath, dataset_SCID,
                                 user_DN, ns_token, project_ID)):
                 yield e
 
-        metrics_end = timer()
-        metrics_message = (
-            f'Run {metrics_uuid} for directory {abspath} '
-            f'completed in {metrics_end - metrics_start} seconds'
+        entries_end = timer()
+        entries_message = (
+            f'Processing entries for request {request_uuid} '
+            f'on directory {abspath} '
+            f'completed in {entries_end - entries_start} seconds'
         )
-        self.metrics_logger.info(metrics_message)
+        self.app.metrics_logger.info(entries_message)
 
     def render_autoindex(self, path, browse_root=None, template=None,
                          template_context=None, endpoint='.autoindex',
@@ -212,6 +211,7 @@ class SafeAutoIndex(AutoIndex):
             # which will, in turn, make the decision of whether to display
             # a given entry.
             safe_entries = self.safe_entry_generator(abspath,
+                                                     request.uuid,
                                                      entries,
                                                      dataset_SCID,
                                                      user_DN,
