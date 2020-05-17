@@ -1,9 +1,8 @@
-import os.path
-import re
-import xattr
-import yaml
-
+from os.path import basename, isdir
 from pathlib import Path
+from re import search as re_search
+from xattr import xattr
+from yaml import safe_load, YAMLError
 
 from impact_presidio.Logging import LOG
 
@@ -14,29 +13,29 @@ _xattr_label_base = 'user.us.cyberimpact.SAFE.SCID'
 
 
 def SafeLabelsFileCheck(path, dataset_SCID):
-    LOG.debug('_project_path is: %s' % _project_path)
-    LOG.debug('_project_path.parent is: %s' % _project_path.parent)
+    LOG.debug(f'_project_path is: {_project_path}')
+    LOG.debug(f'_project_path.parent is: {_project_path.parent}')
 
-    if os.path.basename(path) == _safelabels_filename:
-        LOG.debug('Ignoring SafeLabels file %s' % _safelabels_filename)
+    if basename(path) == _safelabels_filename:
+        LOG.debug(f'Ignoring SafeLabels file {_safelabels_filename}')
         return False
 
     cur_path = Path(path)
-    if not os.path.isdir(cur_path):
+    if not isdir(cur_path):
         cur_path = cur_path.parent
 
     while cur_path != _project_path.parent:
-        LOG.debug('cur_path is: %s' % cur_path)
+        LOG.debug(f'cur_path is: {cur_path}')
         safeLabels = None
         try:
             with open((cur_path / _safelabels_filename), 'r') as sl:
-                safeLabels = yaml.safe_load(sl)
+                safeLabels = safe_load(sl)
         except EnvironmentError:
             # Couldn't find labels file in this directory, so
             # continue loop one level up.
             cur_path = cur_path.parent
             continue
-        except yaml.YAMLError as ye:
+        except YAMLError as ye:
             # OK. This is bad news.
             #
             # The admin *clearly* had an intended set of controls, but
@@ -49,8 +48,7 @@ def SafeLabelsFileCheck(path, dataset_SCID):
             LOG.error('Encountered error while parsing SafeLabels file!')
             LOG.error('Error message:')
             LOG.error(ye)
-            LOG.error('Failing safe, and disallowing access to: %s' %
-                      path)
+            LOG.error(f'Failing safe, and disallowing access to: {path}')
             return False
 
         # Proceeding under the assumption that the safelabels file
@@ -73,11 +71,11 @@ def SafeLabelsFileCheck(path, dataset_SCID):
             LOG.warning('version specification...')
         label_check = SafeLabelsChecker_v1(path, dataset_SCID, safeLabels)
         if label_check:
-            LOG.debug('Matching SCID found for %s' % path)
+            LOG.debug(f'Matching SCID found for {path}')
             return True
         else:
             break
-    LOG.debug('No matching SCIDs found for %s' % path)
+    LOG.debug(f'No matching SCIDs found for {path}')
     return False
 
 
@@ -95,8 +93,7 @@ def SafeLabelsChecker_v1(path, dataset_SCID, safeLabels):
         keys = per_file_overrides.keys()
         labels = None
         for key in keys:
-            rx = re.compile(key)
-            if rx.search(path):
+            if re_search(key, path):
                 labels = per_file_overrides.get(key)
                 break
         if labels is None:
@@ -104,8 +101,8 @@ def SafeLabelsChecker_v1(path, dataset_SCID, safeLabels):
         if type(labels) is str:
             return (labels == dataset_SCID)
         elif type(labels) is list:
-            for l in labels:
-                if (l == dataset_SCID):
+            for label in labels:
+                if (label == dataset_SCID):
                     return True
             return False
         else:
@@ -121,8 +118,8 @@ def SafeLabelsChecker_v1(path, dataset_SCID, safeLabels):
     elif type(default_labels) is str:
         return (default_labels == dataset_SCID)
     elif type(default_labels) is list:
-        for l in default_labels:
-            if (l == dataset_SCID):
+        for label in default_labels:
+            if (label == dataset_SCID):
                 return True
         return False
     else:
@@ -136,21 +133,21 @@ def SafeLabelsChecker_v1(path, dataset_SCID, safeLabels):
 
 def ExtendedAttributeLabelCheck(path, dataset_SCID):
     cur_path = Path(path)
-    LOG.debug('_project_path is: %s' % _project_path)
-    LOG.debug('_project_path.parent is: %s' % _project_path.parent)
+    LOG.debug(f'_project_path is: {_project_path}')
+    LOG.debug(f'_project_path.parent is: {_project_path.parent}')
     while cur_path != _project_path.parent:
-        LOG.debug('cur_path is: %s' % cur_path)
-        path_attrs = xattr.xattr(cur_path)
+        LOG.debug(f'cur_path is: {cur_path}')
+        path_attrs = xattr(cur_path)
         attr_key_list = [e for e in path_attrs.list()
                          if _xattr_label_base in e]
 
         for attr in attr_key_list:
-            LOG.debug('Checking xattr: %s for path: %s' % (attr, cur_path))
+            LOG.debug(f'Checking xattr: {attr} for path: {cur_path}')
             if (path_attrs[attr]).decode('utf-8') == dataset_SCID:
-                LOG.debug('Matching SCID found for %s' % path)
+                LOG.debug(f'Matching SCID found for {path}')
                 return True
         cur_path = cur_path.parent
-    LOG.debug('No matching SCIDs found for %s' % path)
+    LOG.debug(f'No matching SCIDs found for {path}')
     return False
 
 
@@ -177,13 +174,13 @@ def configure_label_mech(presidio_config, project_path):
         conf_xattr_label_base = presidio_config.get('xattr_label_base')
         if conf_xattr_label_base:
             _xattr_label_base = conf_xattr_label_base
-        LOG.info('Extended attribute label base is: %s' % _xattr_label_base)
+        LOG.info(f'Extended attribute label base is: {_xattr_label_base}')
     else:
         LOG.info('Using default SafeLabels file mechanism for SAFE labels.')
         conf_safelabels_filename = presidio_config.get('safelabels_filename')
         if conf_safelabels_filename:
             _safelabels_filename = conf_safelabels_filename
-        LOG.info('SafeLabels file name is: %s' % _safelabels_filename)
+        LOG.info(f'SafeLabels file name is: {_safelabels_filename}')
 
 
 def check_labels(path, dataset_SCID):

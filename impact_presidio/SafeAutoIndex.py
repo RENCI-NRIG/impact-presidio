@@ -1,13 +1,12 @@
-import json
-import os.path
-import random
-import re
-import requests
-
 from datetime import datetime, timedelta
 from flask import request, abort, render_template, send_file
 from flask_autoindex import AutoIndex, RootDirectory, Directory, __autoindex__
 from jinja2 import TemplateNotFound
+from json import dumps as json_dumps
+from os.path import isdir, isfile, join
+from random import shuffle
+from requests import post
+from re import sub as re_sub
 from timeit import default_timer as timer
 
 from impact_presidio.Logging import LOG, METRICS_LOG
@@ -45,36 +44,35 @@ class SafeAutoIndex(AutoIndex):
         methodParams = [dataset_SCID, user_DN, ns_token, project_ID]
         payload_dict = {'principal': presidio_principal,
                         'methodParams': methodParams}
-        payload = json.dumps(payload_dict)
+        payload = json_dumps(payload_dict)
         headers = {'Content-Type': 'application/json',
                    'Accept-Charset': 'UTF-8'}
 
         safe_server_list = self.app.config['SAFE_SERVER_LIST']
-        random.shuffle(safe_server_list)
+        shuffle(safe_server_list)
         for server in safe_server_list:
             safe_result = None
-            url = ('http://' + server + '/access')
+            url = (f'http://{server}/access')
 
             # Check the cache first...
             safe_result = self.query_safe_result_cache(url, methodParams)
             if safe_result is not None:
                 LOG.debug('Using cached SAFE query result')
-                LOG.debug('Access decision for dataset %s by %s was: %s' %
-                          (user_DN, dataset_SCID, safe_result))
+                LOG.debug((f'Access decision for dataset {user_DN} '
+                           f'by {dataset_SCID} was: {safe_result}'))
                 return safe_result
 
             # Nothing in the cache? Time to ask SAFE.
-            LOG.info('Trying to query SAFE with following parameters: %s' %
-                     payload)
+            LOG.info((f'Trying to query SAFE with following '
+                      f'parameters: {payload}'))
 
             resp = None
             try:
-                resp = requests.post(url, data=payload,
-                                     headers=headers, timeout=4)
+                resp = post(url, data=payload,
+                            headers=headers, timeout=4)
             except Exception as e:
-                LOG.warning(('Error occurred while trying to ' +
-                            'query SAFE server: %s') %
-                            server)
+                LOG.warning((f'Error occurred while trying to '
+                             f'query SAFE server: {server}'))
                 LOG.warning('Error message:')
                 LOG.warning(e)
                 LOG.warning('Trying next SAFE server in list (if any)...')
@@ -86,9 +84,8 @@ class SafeAutoIndex(AutoIndex):
                 try:
                     safe_result = resp.json()
                 except Exception as e:
-                    LOG.warning(('Error occurred while parsing response ' +
-                                 'from SAFE server: %s') %
-                                server)
+                    LOG.warning((f'Error occurred while parsing response '
+                                 f'from SAFE server: {server}'))
                     LOG.warning('Error message:')
                     LOG.warning(e)
                     LOG.warning('Trying next SAFE server in list (if any)...')
@@ -96,23 +93,22 @@ class SafeAutoIndex(AutoIndex):
                 finally:
                     resp.close()
 
-            LOG.debug('Status code from SAFE is: %s' % status_code)
+            LOG.debug(f'Status code from SAFE is: {status_code}')
             if status_code == 200:
                 if (safe_result.get('result') == 'succeed'):
-                    LOG.debug('SAFE permitted access for %s to dataset %s' %
-                              (user_DN, dataset_SCID))
+                    LOG.debug((f'SAFE permitted access for {user_DN} '
+                               f'to dataset {dataset_SCID}'))
                     self.update_safe_result_cache(url, methodParams, True)
                     return True
                 else:
                     # We got a non-affirmative response.
-                    LOG.debug(('SAFE did not permit access for %s ' +
-                               'to dataset %s') %
-                              (user_DN, dataset_SCID))
+                    LOG.debug((f'SAFE did not permit access for {user_DN} '
+                               f'to dataset {dataset_SCID}'))
                     self.update_safe_result_cache(url, methodParams, False)
                     return False
             else:
-                LOG.debug('SAFE server %s returned status code %s' %
-                          (server, status_code))
+                LOG.debug((f'SAFE server {server} returned '
+                           f'status code {status_code}'))
                 LOG.debug('Trying next SAFE server in list (if any)...')
                 continue
 
@@ -169,8 +165,8 @@ class SafeAutoIndex(AutoIndex):
             rootdir = RootDirectory(browse_root, autoindex=self)
         else:
             rootdir = self.rootdir
-        path = re.sub(r'\/*$', '', path)
-        abspath = os.path.join(rootdir.abspath, path)
+        path = re_sub(r'\/*$', '', path)
+        abspath = join(rootdir.abspath, path)
 
         if request.cert is None:
             return abort(401, 'Client certificate not found.')
@@ -192,7 +188,7 @@ class SafeAutoIndex(AutoIndex):
         if project_ID is None:
             return abort(401, 'Unable to find project-id in JWT claims.')
 
-        if os.path.isdir(abspath):
+        if isdir(abspath):
             sort_by = request.args.get('sort_by', sort_by)
             if sort_by[0] in ['-', '+']:
                 order = {'+': 1, '-': -1}[sort_by[0]]
@@ -236,7 +232,7 @@ class SafeAutoIndex(AutoIndex):
             except TemplateNotFound:
                 template = '{0}/autoindex.html'.format(__autoindex__)
                 return render_template(template, **context)
-        elif (os.path.isfile(abspath) and
+        elif (isfile(abspath) and
               self.is_it_safe(abspath, dataset_SCID, user_DN,
                               ns_token, project_ID)):
             if mimetype:
