@@ -12,6 +12,8 @@ from timeit import default_timer as timer
 from impact_presidio.Logging import LOG, METRICS_LOG
 from impact_presidio.LabelMechs import check_labels
 
+dt_now = datetime.now
+
 
 class SafeAutoIndex(AutoIndex):
     """A Flask AutoIndex application that checks SAFE
@@ -243,11 +245,11 @@ class SafeAutoIndex(AutoIndex):
             return abort(404)
 
     def query_safe_result_cache(self, url, methodParams):
-        key = (url + str(methodParams))
+        key = f'{url}{methodParams}'
         val = self.safe_result_cache.get(key)
         if val:
             result, expire_time = val
-            if (datetime.now() < expire_time):
+            if (dt_now() < expire_time):
                 return result
         return None
 
@@ -260,10 +262,10 @@ class SafeAutoIndex(AutoIndex):
                 self.safe_result_cache_seconds = expire_seconds
             else:
                 LOG.info('Using default value.')
-            LOG.info('SAFE result cache expiry time is %s seconds.' %
-                     self.safe_result_cache_seconds)
+            LOG.info((f'SAFE result cache expiry time is '
+                      f'{self.safe_result_cache_seconds} seconds.'))
 
-        key = (url + str(methodParams))
-        expire_time = (datetime.now() +
+        key = f'{url}{methodParams}'
+        expire_time = (dt_now() +
                        timedelta(0, self.safe_result_cache_seconds))
         self.safe_result_cache[key] = (result, expire_time)
