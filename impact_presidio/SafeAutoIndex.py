@@ -65,8 +65,8 @@ class SafeAutoIndex(AutoIndex):
                 return safe_result
 
             # Nothing in the cache? Time to ask SAFE.
-            LOG.info((f'Trying to query SAFE with following '
-                      f'parameters: {payload}'))
+            LOG.debug((f'Trying to query SAFE at {url} with the following '
+                       f'parameters: {payload}'))
 
             resp = None
             try:
