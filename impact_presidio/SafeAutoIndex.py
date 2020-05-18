@@ -97,17 +97,24 @@ class SafeAutoIndex(AutoIndex):
 
             LOG.debug(f'Status code from SAFE is: {status_code}')
             if status_code == 200:
+                # Default to deny.
+                result_message = (
+                    f'SAFE did not permit access for {user_DN} '
+                    f'to dataset {dataset_SCID}'
+                )
+                result = False
+
                 if (safe_result.get('result') == 'succeed'):
-                    LOG.debug((f'SAFE permitted access for {user_DN} '
-                               f'to dataset {dataset_SCID}'))
-                    self.update_safe_result_cache(url, methodParams, True)
-                    return True
-                else:
-                    # We got a non-affirmative response.
-                    LOG.debug((f'SAFE did not permit access for {user_DN} '
-                               f'to dataset {dataset_SCID}'))
-                    self.update_safe_result_cache(url, methodParams, False)
-                    return False
+                    # SAFE reported affirmative result.
+                    result_message = (
+                        f'SAFE permitted access for {user_DN} '
+                        f'to dataset {dataset_SCID}'
+                    )
+                    result = True
+
+                LOG.debug(result_message)
+                self.update_safe_result_cache(url, methodParams, result)
+                return result
             else:
                 LOG.debug((f'SAFE server {server} returned '
                            f'status code {status_code}'))
