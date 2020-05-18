@@ -97,18 +97,23 @@ def SafeLabelsChecker_v1(path, dataset_SCID, safeLabels):
                 labels = per_file_overrides.get(key)
                 break
         if labels is None:
-            return False
-        if type(labels) is str:
-            return (labels == dataset_SCID)
-        elif type(labels) is list:
-            for label in labels:
-                if (label == dataset_SCID):
-                    return True
-            return False
+            # There may be no overrides found for the specified path.
+            # That's perfectly valid. Log it at debug level, and move on.
+            LOG.debug('No overrides found for path; proceeding to default.')
+            pass
         else:
-            LOG.warning('Incorrectly specified value in \'overrides\' entry.')
-            LOG.warning('Failing safe...')
-            return False
+            if type(labels) is str:
+                return (labels == dataset_SCID)
+            elif type(labels) is list:
+                for label in labels:
+                    if (label == dataset_SCID):
+                        return True
+                return False
+            else:
+                LOG.warning(('Incorrectly specified value in '
+                             '\'overrides\' entry.'))
+                LOG.warning('Failing safe...')
+                return False
 
     default_labels = safeLabels.get('default')
     if default_labels is None:
