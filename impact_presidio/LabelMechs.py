@@ -100,7 +100,6 @@ def SafeLabelsChecker_v1(path, dataset_SCID, safeLabels):
             # There may be no overrides found for the specified path.
             # That's perfectly valid. Log it at debug level, and move on.
             LOG.debug('No overrides found for path; proceeding to default.')
-            pass
         else:
             if type(labels) is str:
                 return (labels == dataset_SCID)
