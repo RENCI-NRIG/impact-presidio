@@ -55,7 +55,14 @@ ENV ALLOWED_IPS localhost
 # Define time zone, for logs
 ENV TZ America/New_York
 
+# Copy in profiler
+COPY wsgi_profiler.py ${DEPLOYMENT}
+
+# If you want to do profiling, do:
+# export GUNICORN_ADDITIONAL_ARGS="-c ./wsgi_profiler.py"
+env GUNICORN_ADDITIONAL_ARGS ""
+
 # Change user, and run.
 USER ${GUNICORN_USER}
 WORKDIR ${DEPLOYMENT}
-ENTRYPOINT gunicorn --bind=0.0.0.0:8000 --worker-class=gevent --workers="${NUM_WORKERS}" --max-requests="${MAX_REQUESTS_PER_WORKER}" --max-requests-jitter="${MAX_REQUESTS_JITTER}" --timeout="${WORKER_TIMEOUT}" --keep-alive=0 --forwarded-allow-ips="${ALLOWED_IPS}" --error-logfile=${LOGDIR}/error_log --access-logfile=${LOGDIR}/access_log --capture-output --reuse-port impact_presidio:app
+ENTRYPOINT gunicorn --bind=0.0.0.0:8000 --worker-class=gevent --workers="${NUM_WORKERS}" --max-requests="${MAX_REQUESTS_PER_WORKER}" --max-requests-jitter="${MAX_REQUESTS_JITTER}" --timeout="${WORKER_TIMEOUT}" --keep-alive=0 --forwarded-allow-ips="${ALLOWED_IPS}" --error-logfile=${LOGDIR}/error_log --access-logfile=${LOGDIR}/access_log --capture-output --reuse-port ${GUNICORN_ADDITIONAL_ARGS} impact_presidio:app
