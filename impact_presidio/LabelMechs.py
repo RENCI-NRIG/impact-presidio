@@ -9,7 +9,25 @@ from impact_presidio.Logging import LOG
 _label_mech_fn = None
 _project_path = None
 _safelabels_filename = '.safelabels'
+_safelabels_cache = dict()
 _xattr_label_base = 'user.us.cyberimpact.SAFE.SCID'
+
+
+def _get_safelabels(cur_path):
+    sl_path = Path((cur_path / _safelabels_filename))
+    sl_mtime = sl_path.stat().st_mtime
+
+    cached_sl, cached_mtime = _safelabels_cache.get(sl_path,
+                                                    (None, None))
+
+    if cached_sl:
+        if (cached_mtime >= sl_mtime):
+            return cached_sl
+
+    with open(sl_path, 'r') as sl:
+        safeLabels = safe_load(sl)
+        _safelabels_cache[sl_path] = (safeLabels, sl_mtime)
+        return safeLabels
 
 
 def SafeLabelsFileCheck(path, dataset_SCID):
@@ -24,12 +42,11 @@ def SafeLabelsFileCheck(path, dataset_SCID):
     if not isdir(cur_path):
         cur_path = cur_path.parent
 
+    safeLabels = None
     while cur_path != _project_path.parent:
         LOG.debug(f'cur_path is: {cur_path}')
-        safeLabels = None
         try:
-            with open((cur_path / _safelabels_filename), 'r') as sl:
-                safeLabels = safe_load(sl)
+            safeLabels = _get_safelabels(cur_path)
         except EnvironmentError:
             # Couldn't find labels file in this directory, so
             # continue loop one level up.
@@ -75,7 +92,10 @@ def SafeLabelsFileCheck(path, dataset_SCID):
             return True
         else:
             break
-    LOG.debug(f'No matching SCIDs found for {path}')
+    if safeLabels is None:
+        LOG.debug(f'Unable to find a SafeLabels file to apply for {path}')
+    else:
+        LOG.debug(f'No matching SCIDs found for {path}')
     return False
 
 
