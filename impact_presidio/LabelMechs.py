@@ -21,7 +21,7 @@ def _get_safelabels(cur_path):
                                                     (None, None))
 
     if cached_sl:
-        if (cached_mtime >= sl_mtime):
+        if (cached_mtime == sl_mtime):
             return cached_sl
 
     with open(sl_path, 'r') as sl:
