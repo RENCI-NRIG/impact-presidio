@@ -3,7 +3,7 @@
 #
 
 # Pull base image.
-FROM python:3-alpine
+FROM pypy:3
 
 # Define the deployment directories
 ENV CONFIG /etc/impact_presidio
@@ -15,8 +15,8 @@ ENV LOGDIR /var/log/impact_presidio
 ENV GUNICORN_USER nobody
 ENV GUNICORN_GROUP nogroup
 
-# Add dependencies
-RUN apk add --update --no-cache build-base make libffi-dev openssl-dev tzdata
+# Add a convenience item
+RUN apt-get update && apt-get -y install less
 
 # Create the directory structure.
 # "config" and "projects" are mountpoints intended for Docker bind mounts
@@ -38,16 +38,7 @@ RUN cd ${DEPLOYMENT} && \
 EXPOSE 8000
 
 # Define number of workers
-ENV NUM_WORKERS 10
-
-# Maximum number of requests per worker
-ENV MAX_REQUESTS_PER_WORKER 100
-
-# Define worker timeout
-ENV WORKER_TIMEOUT 300
-
-# Randomization factor, for max requests
-ENV MAX_REQUESTS_JITTER 20
+ENV NUM_WORKERS 2
 
 # Define allowed IPs, with a default.
 ENV ALLOWED_IPS localhost
@@ -65,4 +56,4 @@ env GUNICORN_ADDITIONAL_ARGS ""
 # Change user, and run.
 USER ${GUNICORN_USER}
 WORKDIR ${DEPLOYMENT}
-ENTRYPOINT gunicorn --bind=0.0.0.0:8000 --worker-class=gevent --workers="${NUM_WORKERS}" --max-requests="${MAX_REQUESTS_PER_WORKER}" --max-requests-jitter="${MAX_REQUESTS_JITTER}" --timeout="${WORKER_TIMEOUT}" --keep-alive=0 --forwarded-allow-ips="${ALLOWED_IPS}" --error-logfile=${LOGDIR}/error_log --access-logfile=${LOGDIR}/access_log --capture-output --reuse-port ${GUNICORN_ADDITIONAL_ARGS} impact_presidio:app
+ENTRYPOINT gunicorn --bind=0.0.0.0:8000 --worker-class=gevent --workers="${NUM_WORKERS}" --keep-alive=0 --forwarded-allow-ips="${ALLOWED_IPS}" --error-logfile=${LOGDIR}/error_log --access-logfile=${LOGDIR}/access_log --capture-output --reuse-port ${GUNICORN_ADDITIONAL_ARGS} impact_presidio:app

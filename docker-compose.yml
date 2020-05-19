@@ -16,9 +16,7 @@ services:
       - backend
     environment:
       - GUNICORN_ADDITIONAL_ARGS
-      - NUM_WORKERS=${NUM_WORKERS:-10}
-      - MAX_REQUESTS_PER_WORKER=${MAX_REQUESTS_PER_WORKER:-100}
-      - WORKER_TIMEOUT=${WORKER_TIMEOUT:-300}
+      - NUM_WORKERS=${NUM_WORKERS:-2}
     volumes:
       - ./config:/etc/impact_presidio/
       - ./projects:/srv/projects
