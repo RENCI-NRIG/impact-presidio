@@ -253,9 +253,8 @@ class SafeAutoIndex(AutoIndex):
 
     def query_safe_result_cache(self, url, methodParams):
         key = f'{url}{methodParams}'
-        val = self.safe_result_cache.get(key)
-        if val:
-            result, expire_time = val
+        result, expire_time = self.safe_result_cache.get(key, (None, None))
+        if result is not None:
             if (dt_now() < expire_time):
                 return result
         return None
