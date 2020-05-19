@@ -38,7 +38,7 @@ def profiler_summary(worker, req):
     ps.print_stats(PROFILE_LIMIT)
 
     worker.log.info(f'[{req.method}] URI {req.uri}')
-    worker.log.info(f'{s.getvalue()}')
+    worker.log.info(f'\n{s.getvalue()}')
 
 
 def pre_request(worker, req):
