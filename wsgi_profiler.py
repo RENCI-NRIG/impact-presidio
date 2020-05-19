@@ -6,7 +6,6 @@
 
 import cProfile
 import pstats
-import logging
 import os
 import time
 
@@ -38,8 +37,8 @@ def profiler_summary(worker, req):
     ps = pstats.Stats(worker.profile, stream=s).sort_stats('cumulative')
     ps.print_stats(PROFILE_LIMIT)
 
-    logging.info(f'[{req.method}] URI {req.uri}')
-    logging.info(f'{s.getvalue()}')
+    worker.log.info(f'[{req.method}] URI {req.uri}')
+    worker.log.info(f'{s.getvalue()}')
 
 
 def pre_request(worker, req):
@@ -50,6 +49,6 @@ def pre_request(worker, req):
 
 def post_request(worker, req, *args):
     total_time = time.time() - worker.start_time
-    logging.info(f'[{req.method}] Load Time: {total_time:.3f}s')
+    worker.log.info(f'[{req.method}] Load Time: {total_time:.3f}s')
     if PROFILER is True:
         profiler_summary(worker, req)
