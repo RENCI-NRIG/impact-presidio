@@ -165,11 +165,21 @@ def ExtendedAttributeLabelCheck(path, dataset_SCID):
         attr_key_list = [e for e in path_attrs.list()
                          if _xattr_label_base in e]
 
-        for attr in attr_key_list:
-            LOG.debug(f'Checking xattr: {attr} for path: {cur_path}')
-            if (path_attrs[attr]).decode('utf-8') == dataset_SCID:
-                LOG.debug(f'Matching SCID found for {path}')
-                return True
+        if attr_key_list:
+            for attr in attr_key_list:
+                LOG.debug(f'Checking xattr: {attr} for path: {cur_path}')
+                if (path_attrs[attr]).decode('utf-8') == dataset_SCID:
+                    LOG.debug(f'Matching SCID found for {path}')
+                    return True
+            # If we got here, we got to the end of the list of
+            # matching extended attributes, but did not find a
+            # matching SCID.
+            #
+            # Since we found matching extended attributes and
+            # we should match as narrowly as possible, we need
+            # to break out of the path search loop here.
+            break
+
         cur_path = cur_path.parent
     LOG.debug(f'No matching SCIDs found for {path}')
     return False
