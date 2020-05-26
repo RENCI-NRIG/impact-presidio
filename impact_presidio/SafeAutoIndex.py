@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta
 from flask import request, abort, render_template, send_file
 from flask_autoindex import AutoIndex, RootDirectory, Directory, __autoindex__
+from gevent import sleep as gevent_sleep
 from jinja2 import TemplateNotFound
 from json import dumps as json_dumps
 from os.path import isdir, isfile, join
@@ -141,6 +142,7 @@ class SafeAutoIndex(AutoIndex):
             if (self.is_it_safe(e.abspath, dataset_SCID,
                                 user_DN, ns_token, project_ID)):
                 yield e
+                gevent_sleep()
 
         entries_end = timer()
         entries_message = (
