@@ -1,13 +1,13 @@
 from datetime import datetime, timedelta
 from flask import request, abort, render_template, send_file
 from flask_autoindex import AutoIndex, RootDirectory, Directory, __autoindex__
-from gevent import sleep as gevent_sleep
 from jinja2 import TemplateNotFound
 from json import dumps as json_dumps
 from os.path import isdir, isfile, join
 from random import shuffle
 from requests import post
 from re import sub as re_sub
+from time import sleep
 from timeit import default_timer as timer
 
 from impact_presidio.Logging import LOG, METRICS_LOG
@@ -142,7 +142,9 @@ class SafeAutoIndex(AutoIndex):
             if (self.is_it_safe(e.abspath, dataset_SCID,
                                 user_DN, ns_token, project_ID)):
                 yield e
-                gevent_sleep()
+                # Prevent the generator loop from being too tight,
+                # if we're using gevent or eventlet workers.
+                sleep(0)
 
         entries_end = timer()
         entries_message = (
