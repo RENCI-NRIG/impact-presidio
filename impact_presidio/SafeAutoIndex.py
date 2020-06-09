@@ -61,8 +61,8 @@ class SafeAutoIndex(AutoIndex):
             safe_result = self.query_safe_result_cache(url, methodParams)
             if safe_result is not None:
                 LOG.debug('Using cached SAFE query result')
-                LOG.debug((f'Access decision for dataset {user_DN} '
-                           f'by {dataset_SCID} was: {safe_result}'))
+                LOG.debug((f'Access decision for dataset {dataset_SCID} '
+                           f'by {user_DN} was: {safe_result}'))
                 return safe_result
 
             # Nothing in the cache? Time to ask SAFE.
