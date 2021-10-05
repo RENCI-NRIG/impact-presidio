@@ -147,7 +147,7 @@ def process_ns_jwt(jwt, DN_from_cert):
 
     # First, decode without verification, to get issuer.
     try:
-        ns_jwt.decode(publicKey=None)
+        ns_jwt.decode(publicKey=None, verify=False)
     except Exception:
         return (None, "Notary Service JWT failed unverified decode.")
 
