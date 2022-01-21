@@ -163,7 +163,7 @@ def process_ns_jwt(jwt, DN_from_cert):
         if ns_fqdn:
             ns_jwks_url = f'https://{ns_fqdn}/jwks'
             try:
-                ns_jwks_resp = requests.get(ns_jwks_url, verify=True)
+                ns_jwks_resp = get(ns_jwks_url, verify=True)
             except Exception:
                 nw_jwks_resp.close()
                 return (None, 'GET of JWKS from Notary Service failed.')
