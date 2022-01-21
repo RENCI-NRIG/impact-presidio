@@ -7,8 +7,11 @@ import urllib.parse
 import uuid
 
 from flask import request, abort, make_response
-from ns_jwt import NSJWT
 from datetime import datetime
+from jwcrypto import jwk
+from requests import get
+from ns_jwt import NSJWT
+from json import dumps as json_dumps
 from timeit import default_timer as timer
 
 from impact_presidio.Logging import LOG, METRICS_LOG
@@ -156,27 +159,66 @@ def process_ns_jwt(jwt, DN_from_cert):
     verified_claims = None
     if not _use_unverified_jwt:
         ns_fqdn = unverified_claims.get('iss')
-        ns_pubkey = None
+        ns_jwks_resp = None
         if ns_fqdn:
+            ns_jwks_url = f'https://{ns_fqdn}/jwks'
             try:
-                ns_cert = ssl.get_server_certificate((ns_fqdn, 443))
-                ns_x509 = crypto.load_certificate(crypto.FILETYPE_PEM, ns_cert)
-                ns_pubkey = ns_x509.get_pubkey()
+                ns_jwks_resp = requests.get(ns_jwks_url, verify=True)
             except Exception:
-                return (None, (f'Unable to get server certificate '
-                               f'from Notary Service.'))
+                nw_jwks_resp.close()
+                return (None, 'GET of JWKS from Notary Service failed.')
         else:
             return (None, 'Unable to find issuer in JWT claims.')
 
+        ns_jwks_status_code = None
+        ns_jwks_keys_json = None
+        if ns_jwks_resp:
+            ns_jwks_status_code = ns_jwks_resp.status_code
+            try:
+                ns_jwks_keys_json = ns_jwks_resp.json()
+            except Exception as e:
+                return (None, 'Invalid JWKS response from Notary Service.')
+            finally:
+                ns_jwks_resp.close()
+
+        if ns_jwks_status_code != 200:
+            return (None, 'GET of JWKS from Notary Service reported an error.')
+
+        ns_jwks_keys = None
+        if ns_jwks_keys_json:
+            ns_jwks_keys = ns_jwks_keys_json.get('keys')
+        else:
+            return (None, 'Empty JWKS returned by Notary Service.')
+
+        ns_pubkey = None
+        if ns_jwks_keys:
+            num_keys = 0
+            try:
+                num_keys = len(ns_jwks_keys)
+            except Exception:
+                return (None, 'Could not determine number of keys in JWKS.')
+
+            if not (num_keys > 0):
+                return (None, 'Invalid number of keys in JWKS.')
+
+            # Only grab the first key entry from the JWKS, then try to process.
+            ns_jwk = ns_jwks_keys[0]
+            try:
+                ns_jwk_json = json_dumps(ns_jwk).encode('utf-8')
+                ns_pubkey = jwk.JWK.from_json(ns_jwk_json)
+            except Exception:
+                return (None, 'Key entry could not be extracted from JWKS.')
+        else:
+            return (None, 'JWKS from Notary Service missing key container.')
+
         if ns_pubkey:
             try:
-                ns_pubkey_pem = crypto.dump_publickey(crypto.FILETYPE_PEM,
-                                                      ns_pubkey)
+                ns_pubkey_pem = ns_pubkey.export_to_pem().decode('utf-8')
                 ns_jwt.decode(publicKey=ns_pubkey_pem)
             except Exception:
                 return (None, 'Notary Service JWT failed verified decode.')
         else:
-            return (None, 'Could not obtain public key from JWT issuer.')
+            return (None, 'No valid public key provided by JWT issuer.')
 
         try:
             verified_claims = ns_jwt.getClaims()
