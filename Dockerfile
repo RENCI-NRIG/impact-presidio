@@ -21,17 +21,19 @@ RUN apt-get update && apt-get -y install less
 # Create the directory structure.
 # "config" and "projects" are mountpoints intended for Docker bind mounts
 RUN mkdir -p ${CONFIG} && \
-        mkdir -p ${DEPLOYMENT} && \
-        mkdir -p ${PROJECTS} && \
-        mkdir -p ${LOGDIR} && \
-        chown -R ${GUNICORN_USER}:${GUNICORN_GROUP} ${LOGDIR}
+    mkdir -p ${DEPLOYMENT} && \
+    mkdir -p ${PROJECTS} && \
+    mkdir -p ${LOGDIR} && \
+    chown -R ${GUNICORN_USER}:${GUNICORN_GROUP} ${LOGDIR}
 
 # Populate the directory structure.
 COPY setup.py ${DEPLOYMENT}
 COPY impact_presidio ${DEPLOYMENT}/impact_presidio
 
 # Install rust to support latest versions of cryptography dependency.
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+RUN curl --proto '=https' --tlsv1.2 -o /tmp/rustup.sh -sSf https://sh.rustup.rs && \
+    chmod +x /tmp/rustup.sh && \
+    /tmp/rustup.sh -y
 
 # Set up presidio and install all dependencies.
 RUN cd ${DEPLOYMENT} && \
