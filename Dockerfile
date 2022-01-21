@@ -30,6 +30,9 @@ RUN mkdir -p ${CONFIG} && \
 COPY setup.py ${DEPLOYMENT}
 COPY impact_presidio ${DEPLOYMENT}/impact_presidio
 
+# Upgrade pip
+RUN pypy3 -m pip install --upgrade pip
+
 # Set up presidio and install all dependencies.
 RUN cd ${DEPLOYMENT} && \
         pip install -e .
