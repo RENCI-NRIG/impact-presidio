@@ -31,9 +31,8 @@ COPY setup.py ${DEPLOYMENT}
 COPY impact_presidio ${DEPLOYMENT}/impact_presidio
 
 # Install rust to support latest versions of cryptography dependency.
-RUN curl --proto '=https' --tlsv1.2 -o /tmp/rustup.sh -sSf https://sh.rustup.rs && \
-    chmod +x /tmp/rustup.sh && \
-    /tmp/rustup.sh -y
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | bash -s -- -y
+ENV PATH="/root/.cargo/bin:${PATH}"
 
 # Set up presidio and install all dependencies.
 RUN cd ${DEPLOYMENT} && \
