@@ -30,8 +30,8 @@ RUN mkdir -p ${CONFIG} && \
 COPY setup.py ${DEPLOYMENT}
 COPY impact_presidio ${DEPLOYMENT}/impact_presidio
 
-# Upgrade pip
-RUN pypy3 -m pip install --upgrade pip
+# Install rust to support latest versions of cryptography dependency.
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 
 # Set up presidio and install all dependencies.
 RUN cd ${DEPLOYMENT} && \
