@@ -20,6 +20,7 @@ setup(
         'PyYAML >= 3.13',
         'requests >= 2.22.0',
         'xattr >= 0.9.6',
-        'ns_jwt >= 0.1.2'
+        'ns_jwt >= 0.1.2',
+        'jwcrypto >= 1.0'
     ]
 )
