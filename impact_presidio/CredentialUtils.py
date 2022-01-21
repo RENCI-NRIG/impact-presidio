@@ -62,40 +62,36 @@ def process_credentials():
     if url_encoded_cert:
         request.cert = urllib.parse.unquote(url_encoded_cert)
     else:
-        return abort(401, ("Your browser did not provide a client " +
-                           "certificate. A client certificate is required " +
-                           "by Presidio, so that you can be securely " +
-                           "identified. Please contact your administrator " +
-                           "if you require assistance in obtaining client " +
-                           "certificate or installing one into your " +
-                           "browser."))
+        return abort(401, (f'Your browser did not provide a client '
+                           f'certificate. A client certificate is required '
+                           f'by Presidio, so that you can be securely '
+                           f'identified. Please contact your administrator '
+                           f'if you require assistance in obtaining client '
+                           f'certificate or installing one into your '
+                           f'browser.'))
 
     cert_x509 = crypto.load_certificate(crypto.FILETYPE_PEM, request.cert)
     x509_context = crypto.X509StoreContext(_CAStore, cert_x509)
     try:
         verify_result = x509_context.verify_certificate()
     except crypto.X509StoreContextError:
-        return abort(401, ("The client certificate your browser provided " +
-                           "failed to verify against the set of Certificate " +
-                           "Authorities recognized by this instance of " +
-                           "Presidio. Please contact your administrator for " +
-                           "assistance."))
+        return abort(401, (f'The client certificate your browser provided '
+                           f'failed to verify against the set of Certificate '
+                           f'Authorities recognized by this instance of '
+                           f'Presidio. Please contact your administrator for '
+                           f'assistance.'))
 
     # verify_result should be None, if the cert validated.
     if verify_result is not None:
-        return abort(401, ("The client certificate your browser provided " +
-                           "failed to verify against the set of Certificate " +
-                           "Authorities recognized by this instance of " +
-                           "Presidio. Please contact your administrator for " +
-                           "assistance."))
+        return abort(401, (f'The client certificate your browser provided '
+                           f'failed to verify against the set of Certificate '
+                           f'Authorities recognized by this instance of '
+                           f'Presidio. Please contact your administrator for '
+                           f'assistance.'))
 
-    x509_DN_str = ""
+    x509_DN_str = ''
     for k, v in cert_x509.get_subject().get_components():
-        x509_DN_str = (x509_DN_str +
-                       "/" +
-                       k.decode() +
-                       "=" +
-                       v.decode())
+        x509_DN_str = (f'{x509_DN_str}/{k.decode()}={v.decode()}')
 
     jwt_claims = None
     jwt_error = None
@@ -110,10 +106,10 @@ def process_credentials():
                 return abort(401, jwt_error)
 
             if jwt_expiration is None:
-                return abort(401, "Unable to find expiration in JWT claims.")
+                return abort(401, 'Unable to find expiration in JWT claims.')
 
-            res = make_response("")
-            res.set_cookie("ImPACT-JWT", value=jwt_field,
+            res = make_response('')
+            res.set_cookie('ImPACT-JWT', value=jwt_field,
                            expires=jwt_expiration)
             res.headers['Location'] = request.base_url
             return res, 302
@@ -124,10 +120,10 @@ def process_credentials():
     if jwt_cookie:
         (jwt_claims, jwt_error) = process_ns_jwt(jwt_cookie, x509_DN_str)
     else:
-        return abort(401, ("Cookie containing requisite information from " +
-                           "Notary Service missing or expired. Please " +
-                           "log into your Notary Service, and return " +
-                           "to this site via the link it provides."))
+        return abort(401, (f'Cookie containing requisite information from '
+                           f'Notary Service missing or expired. Please '
+                           f'log into your Notary Service, and return '
+                           f'to this site via the link it provides.'))
 
     if jwt_claims:
         request.verified_jwt_claims = jwt_claims
@@ -149,13 +145,13 @@ def process_ns_jwt(jwt, DN_from_cert):
     try:
         ns_jwt.decode(publicKey=None, verify=False)
     except Exception:
-        return (None, "Notary Service JWT failed unverified decode.")
+        return (None, 'Notary Service JWT failed unverified decode.')
 
     unverified_claims = None
     try:
         unverified_claims = ns_jwt.getClaims()
     except Exception:
-        return (None, "Failed to extract unverified claims from JWT.")
+        return (None, 'Failed to extract unverified claims from JWT.')
 
     verified_claims = None
     if not _use_unverified_jwt:
@@ -167,10 +163,10 @@ def process_ns_jwt(jwt, DN_from_cert):
                 ns_x509 = crypto.load_certificate(crypto.FILETYPE_PEM, ns_cert)
                 ns_pubkey = ns_x509.get_pubkey()
             except Exception:
-                return (None, ('Unable to get server certificate ' +
-                               'from Notary Service.'))
+                return (None, (f'Unable to get server certificate '
+                               f'from Notary Service.'))
         else:
-            return (None, "Unable to find issuer in JWT claims.")
+            return (None, 'Unable to find issuer in JWT claims.')
 
         if ns_pubkey:
             try:
@@ -178,23 +174,23 @@ def process_ns_jwt(jwt, DN_from_cert):
                                                       ns_pubkey)
                 ns_jwt.decode(publicKey=ns_pubkey_pem)
             except Exception:
-                return (None, "Notary Service JWT failed verified decode.")
+                return (None, 'Notary Service JWT failed verified decode.')
         else:
-            return (None, "Could not obtain public key from JWT issuer.")
+            return (None, 'Could not obtain public key from JWT issuer.')
 
         try:
             verified_claims = ns_jwt.getClaims()
         except Exception:
-            return (None, "Failed to extract verified claims from JWT.")
+            return (None, 'Failed to extract verified claims from JWT.')
 
         computed_ns_token = generate_safe_principal_id(ns_pubkey)
         ns_token = verified_claims.get('ns-token')
         if ns_token:
             if ns_token != computed_ns_token.decode('utf-8'):
-                return (None, ("JWT ns-token does not match token " +
-                               "computed from public key."))
+                return (None, (f'JWT ns-token does not match token '
+                               f'computed from public key.'))
         else:
-            return (None, "Unable to find ns-token in JWT claims.")
+            return (None, 'Unable to find ns-token in JWT claims.')
 
     else:
         LOG.warning('BAD IDEA: Using unverified JWT claims, against advice...')
@@ -204,16 +200,16 @@ def process_ns_jwt(jwt, DN_from_cert):
     if expiry:
         dte = datetime.fromtimestamp(expiry)
         if datetime.now() > dte:
-            return (None, "JWT has expired.")
+            return (None, 'JWT has expired.')
     else:
-        return (None, "Unable to find expiry in JWT claims.")
+        return (None, 'Unable to find expiry in JWT claims.')
 
     userDN = verified_claims.get('sub')
     if userDN:
         if userDN != DN_from_cert:
-            return (None, ("JWT subject does not match " +
-                           "value from client certificate."))
+            return (None, (f'JWT subject does not match '
+                           f'value from client certificate.'))
     else:
-        return (None, "Unable to find subject in JWT claims.")
+        return (None, 'Unable to find subject in JWT claims.')
 
     return (verified_claims, None)
