@@ -202,10 +202,13 @@ def process_ns_jwt(jwt, DN_from_cert):
                 return (None, 'Invalid number of keys in JWKS.')
 
             # Only grab the first key entry from the JWKS, then try to process.
-            ns_jwk = ns_jwks_keys[0]
+            ns_jwk_value = ns_jwks_keys[0]
             try:
-                ns_jwk_json = json_dumps(ns_jwk).encode('utf-8')
-                ns_pubkey = jwk.JWK.from_json(ns_jwk_json)
+                ns_jwk_json = json_dumps(ns_jwk_value).encode('utf-8')
+                ns_jwk = jwk.JWK.from_json(ns_jwk_json)
+                ns_jwk_pem = ns_jwk.export_to_pem().decode('utf-8')
+                ns_pubkey = crypto.load_publickey(crypto.FILETYPE_PEM,
+                                                  ns_jwk_pem)
             except Exception:
                 return (None, 'Key entry could not be extracted from JWKS.')
         else:
@@ -213,7 +216,8 @@ def process_ns_jwt(jwt, DN_from_cert):
 
         if ns_pubkey:
             try:
-                ns_pubkey_pem = ns_pubkey.export_to_pem().decode('utf-8')
+                ns_pubkey_pem = crypto.dump_publickey(crypto.FILETYPE_PEM,
+                                                      ns_pubkey)
                 ns_jwt.decode(publicKey=ns_pubkey_pem)
             except Exception:
                 return (None, 'Notary Service JWT failed verified decode.')
