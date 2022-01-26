@@ -32,11 +32,17 @@ COPY impact_presidio ${DEPLOYMENT}/impact_presidio
 
 # Install rust to support latest versions of cryptography dependency.
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | bash -s -- -y
-ENV PATH="/root/.cargo/bin:${PATH}"
 
-# Set up presidio and install all dependencies.
-RUN cd ${DEPLOYMENT} && \
-        pip install -e .
+# Set up presidio dependencies.
+RUN export PATH="/root/.cargo/bin:${PATH}" && \
+    cd ${DEPLOYMENT} && \
+    pypy3 setup.py egg_info && \
+    pip install -r *.egg-info/requires.txt
+
+# Set up presidio itself
+RUN export PATH="/root/.cargo/bin:${PATH}" && \
+    cd ${DEPLOYMENT} && \
+    pip install -e .
 
 # Define ports
 EXPOSE 8000
