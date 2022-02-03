@@ -79,7 +79,8 @@ class SafeAutoIndex(AutoIndex):
                 LOG.warning('Error message:')
                 LOG.warning(e)
                 LOG.warning('Trying next SAFE server in list (if any)...')
-                resp.close()
+                if resp:
+                    resp.close()
                 continue
 
             status_code = None
