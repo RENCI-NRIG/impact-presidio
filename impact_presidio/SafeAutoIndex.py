@@ -37,8 +37,8 @@ class SafeAutoIndex(AutoIndex):
         if bypass_safe:
             LOG.warning('BAD IDEA: Bypassing SAFE servers requested!')
             LOG.warning('BAD IDEA: This option is for debugging ONLY!')
-            LOG.warning(('BAD IDEA: Please, please don\'t ' +
-                         'use this in production!'))
+            LOG.warning((f'BAD IDEA: Please, please don\'t '
+                         f'use this in production!'))
             LOG.warning('BAD IDEA: You have been warned...')
             return True
 
@@ -124,8 +124,8 @@ class SafeAutoIndex(AutoIndex):
                 LOG.debug('Trying next SAFE server in list (if any)...')
                 continue
 
-        LOG.warning(('None of the configured SAFE servers replied;' +
-                     'denying access.'))
+        LOG.warning((f'None of the configured SAFE servers replied; '
+                     f'denying access.'))
         return False
 
     def is_it_safe(self, path, dataset_SCID,
