@@ -165,7 +165,8 @@ def process_ns_jwt(jwt, DN_from_cert):
             try:
                 ns_jwks_resp = get(ns_jwks_url, verify=True)
             except Exception:
-                nw_jwks_resp.close()
+                if nw_jwks_resp:
+                    nw_jwks_resp.close()
                 return (None, 'GET of JWKS from Notary Service failed.')
         else:
             return (None, 'Unable to find issuer in JWT claims.')
